@@ -1,5 +1,8 @@
 import pytest
 import json
+from time import sleep, time
+from typing import Any, Optional, List
+from pydantic import BaseModel, Field, ValidationError
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
 from llm_easy_tools import LLMFunction
@@ -8,6 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 def mk_tool_call(name, args):
     arguments = json.dumps(args)
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=arguments), type='function')
+
+def mk_tool_call_jason(name, args):
+    return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=args), type='function')
 
 def mk_chat_completion(tool_calls):
     return SimpleCompletion(
@@ -64,7 +70,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: list[Company]):
+    def print_companies(companies: List[Company]):
         return companies
 
     company_list = [{
@@ -106,7 +112,7 @@ def test_json_fix():
 
 def test_list_in_string_fix():
     class User(BaseModel):
-        names: list[str]
+        names: Optional[List[str]] = Field(default_factory=list)
 
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
@@ -137,15 +143,16 @@ def test_parallel_tools():
 
         def increment_counter(self):
             self.counter += 1
+            sleep(1)
 
     counter = CounterClass()
     tool_call = mk_tool_call("increment_counter", {})
     response = mk_chat_completion([tool_call] * 10)
 
     executor = ThreadPoolExecutor()
-    start_time = time.time()
+    start_time = time()
     results = process_response(response, [counter.increment_counter], executor=executor)
-    end_time = time.time()
+    end_time = time()
 
     assert results[9].error is None
 
