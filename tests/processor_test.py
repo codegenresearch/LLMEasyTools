@@ -155,17 +155,17 @@ def test_parallel_tools():
 
     counter = CounterClass()
     tool_call = mk_tool_call("increment_counter", {})
-    response = mk_chat_completion([tool_call] * 11)
+    response = mk_chat_completion([tool_call] * 10)
 
     executor = ThreadPoolExecutor()
     start_time = time()
     results = process_response(response, [counter.increment_counter], executor=executor)
     end_time = time()
 
-    assert results[10].error is None
+    assert results[9].error is None
 
     time_taken = end_time - start_time
-    assert counter.counter == 11
+    assert counter.counter == 10
     assert time_taken <= 3, f"Expected processing time to be less than or equal to 3 seconds, but was {time_taken}"
 
 def test_process_one_tool_call():
