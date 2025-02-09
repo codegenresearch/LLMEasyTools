@@ -11,16 +11,16 @@ from pprint import pprint
 import sys
 
 class LLMFunction:
-    def __init__(self, func: Callable, schema: Dict[str, Any] = None, name: str = None, description: str = None, strict: bool = False):
+    def __init__(self, func, schema=None, name=None, description=None, strict=False):
         """
         Initializes an LLMFunction instance.
 
         Args:
-            func (Callable): The function to be wrapped.
-            schema (Dict[str, Any], optional): A pre-defined schema for the function. Defaults to None.
-            name (str, optional): The name of the function. Defaults to None.
-            description (str, optional): The description of the function. Defaults to None.
-            strict (bool, optional): Whether to enforce strict schema validation. Defaults to False.
+            func: The function to be wrapped.
+            schema: A pre-defined schema for the function.
+            name: The name of the function.
+            description: The description of the function.
+            strict: Whether to enforce strict schema validation.
         """
         self.func = func
         self.__name__ = func.__name__
@@ -40,7 +40,7 @@ class LLMFunction:
             if description:
                 self.schema['description'] = description
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def __call__(self, *args, **kwargs):
         """
         Calls the wrapped function with the provided arguments.
 
@@ -49,19 +49,19 @@ class LLMFunction:
             **kwargs: Keyword arguments to pass to the function.
 
         Returns:
-            Any: The result of the function call.
+            The result of the function call.
         """
         return self.func(*args, **kwargs)
 
-def tool_def(function_schema: Dict[str, Any]) -> Dict[str, Any]:
+def tool_def(function_schema):
     """
     Creates a tool definition dictionary from a function schema.
 
     Args:
-        function_schema (Dict[str, Any]): The schema of the function.
+        function_schema: The schema of the function.
 
     Returns:
-        Dict[str, Any]: The tool definition dictionary.
+        The tool definition dictionary.
     """
     return {
         "type": "function",
@@ -69,24 +69,24 @@ def tool_def(function_schema: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 def get_tool_defs(
-        functions: list[Union[Callable, LLMFunction]],
-        case_insensitive: bool = False,
-        prefix_class: Union[Type[BaseModel], None] = None,
-        prefix_schema_name: bool = True,
-        strict: bool = False
-) -> list[Dict[str, Any]]:
+        functions,
+        case_insensitive=False,
+        prefix_class=None,
+        prefix_schema_name=True,
+        strict=False
+):
     """
     Generates tool definitions for a list of functions or LLMFunctions.
 
     Args:
-        functions (list[Union[Callable, LLMFunction]]): The list of functions or LLMFunctions.
-        case_insensitive (bool, optional): Whether to treat function names case-insensitively. Defaults to False.
-        prefix_class (Union[Type[BaseModel], None], optional): A Pydantic BaseModel class to prefix the schema. Defaults to None.
-        prefix_schema_name (bool, optional): Whether to include the prefix class name in the schema. Defaults to True.
-        strict (bool, optional): Whether to enforce strict schema validation. Defaults to False.
+        functions: The list of functions or LLMFunctions.
+        case_insensitive: Whether to treat function names case-insensitively.
+        prefix_class: A Pydantic BaseModel class to prefix the schema.
+        prefix_schema_name: Whether to include the prefix class name in the schema.
+        strict: Whether to enforce strict schema validation.
 
     Returns:
-        list[Dict[str, Any]]: The list of tool definitions.
+        The list of tool definitions.
     """
     result = []
     for function in functions:
@@ -100,15 +100,15 @@ def get_tool_defs(
         result.append(tool_def(fun_schema))
     return result
 
-def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]:
+def parameters_basemodel_from_function(function):
     """
     Creates a Pydantic BaseModel from the parameters of a function.
 
     Args:
-        function (Callable): The function to extract parameters from.
+        function: The function to extract parameters from.
 
     Returns:
-        Type[pd.BaseModel]: The created Pydantic BaseModel.
+        The created Pydantic BaseModel.
     """
     fields = {}
     parameters = inspect.signature(function).parameters
@@ -128,12 +128,12 @@ def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]
         fields[name] = (type_, pd.Field(default, description=description))
     return pd.create_model(f'{function.__name__}_ParameterModel', **fields)
 
-def _recursive_purge_titles(d: Dict[str, Any]) -> None:
+def _recursive_purge_titles(d):
     """
     Recursively removes 'title' keys from a dictionary.
 
     Args:
-        d (Dict[str, Any]): The dictionary to process.
+        d: The dictionary to process.
     """
     if isinstance(d, dict):
         for key in list(d.keys()):
@@ -142,31 +142,31 @@ def _recursive_purge_titles(d: Dict[str, Any]) -> None:
             else:
                 _recursive_purge_titles(d[key])
 
-def get_name(func: Union[Callable, LLMFunction], case_insensitive: bool = False) -> str:
+def get_name(func, case_insensitive=False):
     """
     Retrieves the name of a function or LLMFunction.
 
     Args:
-        func (Union[Callable, LLMFunction]): The function or LLMFunction.
-        case_insensitive (bool, optional): Whether to treat the name case-insensitively. Defaults to False.
+        func: The function or LLMFunction.
+        case_insensitive: Whether to treat the name case-insensitively.
 
     Returns:
-        str: The name of the function or LLMFunction.
+        The name of the function or LLMFunction.
     """
     schema_name = func.schema['name'] if isinstance(func, LLMFunction) else func.__name__
     return schema_name.lower() if case_insensitive else schema_name
 
-def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive: bool = False, strict: bool = False) -> Dict[str, Any]:
+def get_function_schema(function, case_insensitive=False, strict=False):
     """
     Generates a function schema from a function or LLMFunction.
 
     Args:
-        function (Union[Callable, LLMFunction]): The function or LLMFunction.
-        case_insensitive (bool, optional): Whether to treat the function name case-insensitively. Defaults to False.
-        strict (bool, optional): Whether to enforce strict schema validation. Defaults to False.
+        function: The function or LLMFunction.
+        case_insensitive: Whether to treat the function name case-insensitively.
+        strict: Whether to enforce strict schema validation.
 
     Returns:
-        Dict[str, Any]: The generated function schema.
+        The generated function schema.
     """
     if isinstance(function, LLMFunction):
         if case_insensitive:
@@ -190,28 +190,28 @@ def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive
 
     return function_schema
 
-def to_strict_json_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
+def to_strict_json_schema(schema):
     """
     Converts a JSON schema to a strict JSON schema.
 
     Args:
-        schema (Dict[str, Any]): The JSON schema to convert.
+        schema: The JSON schema to convert.
 
     Returns:
-        Dict[str, Any]: The strict JSON schema.
+        The strict JSON schema.
     """
     return _ensure_strict_json_schema(schema, ())
 
-def _ensure_strict_json_schema(json_schema: object, path: tuple[str, ...]) -> Dict[str, Any]:
+def _ensure_strict_json_schema(json_schema, path):
     """
     Ensures a JSON schema conforms to the strict standard.
 
     Args:
-        json_schema (object): The JSON schema to process.
-        path (tuple[str, ...]): The path to the current location in the schema.
+        json_schema: The JSON schema to process.
+        path: The path to the current location in the schema.
 
     Returns:
-        Dict[str, Any]: The processed JSON schema.
+        The processed JSON schema.
     """
     if not is_dict(json_schema):
         raise TypeError(f"Expected {json_schema} to be a dictionary; path={path}")
@@ -244,30 +244,30 @@ def _ensure_strict_json_schema(json_schema: object, path: tuple[str, ...]) -> Di
 
     return json_schema
 
-def is_dict(obj: object) -> TypeGuard[dict[str, object]]:
+def is_dict(obj):
     """
     Checks if an object is a dictionary.
 
     Args:
-        obj (object): The object to check.
+        obj: The object to check.
 
     Returns:
-        TypeGuard[dict[str, object]]: True if the object is a dictionary, False otherwise.
+        True if the object is a dictionary, False otherwise.
     """
     return isinstance(obj, dict)
 
-def insert_prefix(prefix_class: Type[BaseModel], schema: Dict[str, Any], prefix_schema_name: bool = True, case_insensitive: bool = False) -> Dict[str, Any]:
+def insert_prefix(prefix_class, schema, prefix_schema_name=True, case_insensitive=False):
     """
     Inserts a prefix class schema into a function schema.
 
     Args:
-        prefix_class (Type[BaseModel]): The Pydantic BaseModel class to prefix.
-        schema (Dict[str, Any]): The function schema.
-        prefix_schema_name (bool, optional): Whether to include the prefix class name in the schema. Defaults to True.
-        case_insensitive (bool, optional): Whether to treat the prefix class name case-insensitively. Defaults to False.
+        prefix_class: The Pydantic BaseModel class to prefix.
+        schema: The function schema.
+        prefix_schema_name: Whether to include the prefix class name in the schema.
+        case_insensitive: Whether to treat the prefix class name case-insensitively.
 
     Returns:
-        Dict[str, Any]: The updated function schema.
+        The updated function schema.
     """
     if not issubclass(prefix_class, BaseModel):
         raise TypeError("The given class reference is not a subclass of pydantic BaseModel")
