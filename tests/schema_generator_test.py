@@ -1,7 +1,7 @@
 import pytest
 from typing import List, Optional, Union, Annotated
 from pydantic import BaseModel, Field
-from llm_easy_tools import get_function_schema, insert_prefix, LLMFunction
+from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_name, get_tool_defs
 
 def simple_function(count: int, size: Optional[float] = None):
@@ -12,17 +12,17 @@ def simple_function_no_docstring(apple: Annotated[str, 'The apple'], banana: Ann
     pass
 
 def test_function_schema():
-    schema = get_function_schema(simple_function)
-    assert schema['name'] == 'simple_function'
-    assert schema['description'] == 'Simple function does something.'
-    params = schema['parameters']
-    assert len(params['properties']) == 2
-    assert params['type'] == "object"
-    assert params['properties']['count']['type'] == "integer"
-    assert 'size' in params['properties']
-    assert 'title' not in params
-    assert 'title' not in params['properties']['count']
-    assert 'description' not in params
+    function_schema = get_function_schema(simple_function)
+    assert function_schema['name'] == 'simple_function'
+    assert function_schema['description'] == 'Simple function does something.'
+    params_schema = function_schema['parameters']
+    assert len(params_schema['properties']) == 2
+    assert params_schema['type'] == "object"
+    assert params_schema['properties']['count']['type'] == "integer"
+    assert 'size' in params_schema['properties']
+    assert 'title' not in params_schema
+    assert 'title' not in params_schema['properties']['count']
+    assert 'description' not in params_schema
 
 def test_noparams():
     def function_with_no_params():
@@ -48,7 +48,7 @@ def test_nested():
         size: Optional[float] = None
 
     class Bar(BaseModel):
-        """Some Bar"""
+        """Some Bar."""
         apple: str = Field(description="The apple")
         banana: str = Field(description="The banana")
 
@@ -60,14 +60,14 @@ def test_nested():
         """Spams everything."""
         pass
 
-    schema = get_function_schema(nested_structure_function)
-    assert schema['name'] == 'nested_structure_function'
-    assert schema['description'] == 'Spams everything.'
-    assert len(schema['parameters']['properties']) == 2
+    function_schema = get_function_schema(nested_structure_function)
+    assert function_schema['name'] == 'nested_structure_function'
+    assert function_schema['description'] == 'Spams everything.'
+    assert len(function_schema['parameters']['properties']) == 2
 
-    schema = get_function_schema(FooAndBar)
-    assert schema['name'] == 'FooAndBar'
-    assert len(schema['parameters']['properties']) == 2
+    function_schema = get_function_schema(FooAndBar)
+    assert function_schema['name'] == 'FooAndBar'
+    assert len(function_schema['parameters']['properties']) == 2
 
 def test_methods():
     class ExampleClass:
@@ -75,12 +75,12 @@ def test_methods():
             """Simple method does something."""
             pass
 
-    example = ExampleClass()
-    schema = get_function_schema(example.simple_method)
-    assert schema['name'] == 'simple_method'
-    assert schema['description'] == 'Simple method does something.'
-    params = schema['parameters']
-    assert len(params['properties']) == 2
+    example_object = ExampleClass()
+    function_schema = get_function_schema(example_object.simple_method)
+    assert function_schema['name'] == 'simple_method'
+    assert function_schema['description'] == 'Simple method does something.'
+    params_schema = function_schema['parameters']
+    assert len(params_schema['properties']) == 2
 
 def test_LLMFunction():
     def new_simple_function(count: int, size: Optional[float] = None):
@@ -88,31 +88,31 @@ def test_LLMFunction():
         pass
 
     func = LLMFunction(new_simple_function, name='changed_name')
-    schema = func.schema
-    assert schema['name'] == 'changed_name'
-    assert not schema.get('strict', False)
+    function_schema = func.schema
+    assert function_schema['name'] == 'changed_name'
+    assert not function_schema.get('strict', False)
 
     func = LLMFunction(simple_function, strict=True)
-    schema = func.schema
-    assert schema['strict'] == True
+    function_schema = func.schema
+    assert function_schema['strict'] == True
 
 def test_merge_schemas():
     class Reflection(BaseModel):
         relevancy: str = Field(..., description="Was the last retrieved information relevant and why?")
         next_actions_plan: str = Field(..., description="What you plan to do next and why")
 
-    schema = get_function_schema(simple_function)
-    new_schema = insert_prefix(Reflection, schema)
+    function_schema = get_function_schema(simple_function)
+    new_schema = insert_prefix(Reflection, function_schema)
     assert new_schema['name'] == "Reflection_and_simple_function"
     assert len(new_schema['parameters']['properties']) == 4
     assert len(new_schema['parameters']['required']) == 3
-    assert len(schema['parameters']['properties']) == 2
-    assert len(schema['parameters']['required']) == 1
+    assert len(function_schema['parameters']['properties']) == 2
+    assert len(function_schema['parameters']['required']) == 1
     param_names = list(new_schema['parameters']['properties'].keys())
     assert param_names == ['relevancy', 'next_actions_plan', 'count', 'size']
 
-    schema = get_function_schema(simple_function)
-    new_schema = insert_prefix(Reflection, schema, case_insensitive=True)
+    function_schema = get_function_schema(simple_function)
+    new_schema = insert_prefix(Reflection, function_schema, case_insensitive=True)
     assert new_schema['name'] == "reflection_and_simple_function"
 
 def test_noparams_function_merge():
@@ -123,11 +123,11 @@ def test_noparams_function_merge():
         relevancy: str = Field(..., description="Was the last retrieved information relevant and why?")
         next_actions_plan: str = Field(..., description="What you plan to do next and why")
 
-    schema = get_function_schema(function_no_params)
-    assert schema['name'] == 'function_no_params'
-    assert schema['parameters']['properties'] == {}
+    function_schema = get_function_schema(function_no_params)
+    assert function_schema['name'] == 'function_no_params'
+    assert function_schema['parameters']['properties'] == {}
 
-    new_schema = insert_prefix(Reflection, schema)
+    new_schema = insert_prefix(Reflection, function_schema)
     assert len(new_schema['parameters']['properties']) == 2
     assert new_schema['name'] == 'Reflection_and_function_no_params'
 
@@ -137,17 +137,17 @@ def test_model_init_function():
         name: str
         city: str
 
-    schema = get_function_schema(User)
-    assert schema['name'] == 'User'
-    assert schema['description'] == 'A user object.'
-    assert len(schema['parameters']['properties']) == 2
-    assert len(schema['parameters']['required']) == 2
+    function_schema = get_function_schema(User)
+    assert function_schema['name'] == 'User'
+    assert function_schema['description'] == 'A user object.'
+    assert len(function_schema['parameters']['properties']) == 2
+    assert len(function_schema['parameters']['required']) == 2
 
-    new_func = LLMFunction(User, name="extract_user_details")
-    assert new_func.schema['name'] == 'extract_user_details'
-    assert new_func.schema['description'] == 'A user object.'
-    assert len(new_func.schema['parameters']['properties']) == 2
-    assert len(new_func.schema['parameters']['required']) == 2
+    new_function = LLMFunction(User, name="extract_user_details")
+    assert new_function.schema['name'] == 'extract_user_details'
+    assert new_function.schema['description'] == 'A user object.'
+    assert len(new_function.schema['parameters']['properties']) == 2
+    assert len(new_function.schema['parameters']['required']) == 2
 
 def test_case_insensitivity():
     class User(BaseModel):
@@ -155,8 +155,8 @@ def test_case_insensitivity():
         name: str
         city: str
 
-    schema = get_function_schema(User, case_insensitive=True)
-    assert schema['name'] == 'user'
+    function_schema = get_function_schema(User, case_insensitive=True)
+    assert function_schema['name'] == 'user'
     assert get_name(User, case_insensitive=True) == 'user'
 
 def test_function_no_type_annotation():
@@ -188,18 +188,18 @@ def test_strict():
     class Company(BaseModel):
         name: str
         speciality: str
-        addresses: list[Address]
+        addresses: List[Address]
 
-    def print_companies(companies: list[Company]):
+    def print_companies(companies: List[Company]):
         ...
 
     schema = get_tool_defs([print_companies], strict=True)
     pprint(schema)
 
-    func_schema = schema[0]['function']
-    assert func_schema['name'] == 'print_companies'
-    assert func_schema['strict'] == True
-    assert func_schema['parameters']['additionalProperties'] == False
-    assert func_schema['parameters']['$defs']['Address']['additionalProperties'] == False
-    assert func_schema['parameters']['$defs']['Address']['properties']['street']['type'] == 'string'
-    assert func_schema['parameters']['$defs']['Company']['additionalProperties'] == False
+    function_schema = schema[0]['function']
+    assert function_schema['name'] == 'print_companies'
+    assert function_schema['strict'] == True
+    assert function_schema['parameters']['additionalProperties'] == False
+    assert function_schema['parameters']['$defs']['Address']['additionalProperties'] == False
+    assert function_schema['parameters']['$defs']['Address']['properties']['street']['type'] == 'string'
+    assert function_schema['parameters']['$defs']['Company']['additionalProperties'] == False
