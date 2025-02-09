@@ -10,7 +10,7 @@ from llm_easy_tools.types import ChatCompletion, ChatCompletionMessageToolCall, 
 
 class NoMatchingTool(Exception):
     """Exception raised when a tool call does not match any available function."""
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__(message)
 
 @dataclass
@@ -62,7 +62,7 @@ class ToolResult:
             "content": content,
         }
 
-def process_tool_call(tool_call, functions_or_models, fix_json_args=True, case_insensitive=False):
+def process_tool_call(tool_call: ChatCompletionMessageToolCall, functions_or_models, fix_json_args: bool = True, case_insensitive: bool = False) -> ToolResult:
     """
     Processes a single tool call by matching it to a function or model and executing it.
 
@@ -78,10 +78,10 @@ def process_tool_call(tool_call, functions_or_models, fix_json_args=True, case_i
     function_call = tool_call.function
     tool_name = function_call.name
     args = function_call.arguments
-    soft_errors = []
-    error = None
-    stack_trace = None
-    output = None
+    soft_errors: list[Exception] = []
+    error: Optional[Exception] = None
+    stack_trace: Optional[str] = None
+    output: Optional[Any] = None
 
     try:
         tool_args = json.loads(args)
@@ -119,7 +119,7 @@ def process_tool_call(tool_call, functions_or_models, fix_json_args=True, case_i
         tool=tool,
     )
 
-def split_string_to_list(s):
+def split_string_to_list(s: str) -> list[str]:
     """
     Splits a string into a list, handling potential JSON encoding issues.
 
@@ -134,7 +134,7 @@ def split_string_to_list(s):
     except json.JSONDecodeError:
         return [item.strip() for item in s.split(',')]
 
-def _process_unpacked(function, tool_args={}, fix_json_args=True):
+def _process_unpacked(function: Union[Callable, LLMFunction], tool_args: dict[str, Any] = {}, fix_json_args: bool = True) -> tuple[Any, list[Exception]]:
     """
     Processes the arguments and executes the function.
 
@@ -149,7 +149,7 @@ def _process_unpacked(function, tool_args={}, fix_json_args=True):
     if isinstance(function, LLMFunction):
         function = function.func
     model = parameters_basemodel_from_function(function)
-    soft_errors = []
+    soft_errors: list[Exception] = []
     if fix_json_args:
         for field, field_info in model.model_fields.items():
             if _is_list_type(field_info.annotation) and isinstance(tool_args.get(field), str):
@@ -160,7 +160,7 @@ def _process_unpacked(function, tool_args={}, fix_json_args=True):
     args = {field: getattr(model_instance, field) for field in model.model_fields}
     return function(**args), soft_errors
 
-def _is_list_type(annotation):
+def _is_list_type(annotation: Any) -> bool:
     """
     Checks if the given annotation is a list type.
 
@@ -174,7 +174,7 @@ def _is_list_type(annotation):
     args = get_args(annotation)
     return origin is list or (origin in (Union, Optional) and any(_is_list_type(arg) for arg in args))
 
-def _extract_prefix_unpacked(tool_args, prefix_class):
+def _extract_prefix_unpacked(tool_args: dict[str, Any], prefix_class: type[BaseModel]) -> BaseModel:
     """
     Extracts and removes prefix arguments from tool_args.
 
@@ -188,7 +188,7 @@ def _extract_prefix_unpacked(tool_args, prefix_class):
     prefix_args = {key: tool_args.pop(key) for key in list(tool_args.keys()) if key in prefix_class.__annotations__}
     return prefix_class(**prefix_args)
 
-def process_response(response, functions, choice_num=0, **kwargs):
+def process_response(response: ChatCompletion, functions: list[Union[Callable, LLMFunction]], choice_num: int = 0, **kwargs) -> list[ToolResult]:
     """
     Processes a ChatCompletion response, executing contained tool calls.
 
@@ -203,7 +203,7 @@ def process_response(response, functions, choice_num=0, **kwargs):
     message = response.choices[choice_num].message
     return process_message(message, functions, **kwargs)
 
-def process_message(message, functions, fix_json_args=True, case_insensitive=False, executor=None):
+def process_message(message: ChatCompletionMessage, functions: list[Union[Callable, LLMFunction]], fix_json_args: bool = True, case_insensitive: bool = False, executor: Optional[ThreadPoolExecutor] = None) -> list[ToolResult]:
     """
     Processes a message containing tool calls.
 
@@ -225,7 +225,7 @@ def process_message(message, functions, fix_json_args=True, case_insensitive=Fal
     process_func = executor.map if executor else map
     return list(process_func(lambda args: process_tool_call(*args), args_list))
 
-def process_one_tool_call(response, functions, index=0, **kwargs):
+def process_one_tool_call(response: ChatCompletion, functions: list[Union[Callable, LLMFunction]], index: int = 0, **kwargs) -> Optional[ToolResult]:
     """
     Processes a single tool call from a ChatCompletion response at the specified index.
 
@@ -240,7 +240,7 @@ def process_one_tool_call(response, functions, index=0, **kwargs):
     tool_calls = _get_tool_calls(response)
     return process_tool_call(tool_calls[index], functions, **kwargs) if tool_calls and index < len(tool_calls) else None
 
-def _get_tool_calls(response):
+def _get_tool_calls(response: ChatCompletion) -> list[ChatCompletionMessageToolCall]:
     """
     Extracts tool calls from a ChatCompletion response.
 
