@@ -1,8 +1,8 @@
 import pytest
-from typing import List, Optional, Union, Annotated
+from typing import List, Optional, Union, Annotated, Literal
 from pydantic import BaseModel, Field, field_validator
 from llm_easy_tools import get_function_schema, LLMFunction
-from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_name, get_tool_defs
+from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
 from pprint import pprint
 
 
