@@ -254,7 +254,9 @@ def process_one_tool_call(response: ChatCompletion, functions: list[Union[Callab
         Optional[ToolResult]: The result of the tool call, or None if the index is out of range.
     """
     tool_calls = _get_tool_calls(response)
-    return process_tool_call(tool_calls[index], functions, **kwargs) if tool_calls and index < len(tool_calls) else None
+    if not tool_calls or index >= len(tool_calls):
+        return None
+    return process_tool_call(tool_calls[index], functions, **kwargs)
 
 def _get_tool_calls(response: ChatCompletion) -> list[ChatCompletionMessageToolCall]:
     """
