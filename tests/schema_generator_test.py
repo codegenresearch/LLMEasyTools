@@ -1,8 +1,11 @@
 import pytest
-from typing import List, Optional, Union, Annotated
-from pydantic import BaseModel, Field
+from typing import List, Optional, Union, Literal, Annotated
+from pydantic import BaseModel, Field, field_validator
+
 from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import get_tool_defs
+
+from pprint import pprint
 
 
 def simple_function(count: int, size: Optional[float] = None):
@@ -174,6 +177,8 @@ def test_strict():
         ...
 
     schema = get_tool_defs([print_companies], strict=True)
+    pprint(schema)
+
     function_schema = schema[0]['function']
 
     assert function_schema['name'] == 'print_companies'
