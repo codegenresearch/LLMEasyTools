@@ -1,15 +1,15 @@
 import pytest
-from typing import List, Optional, Union, Literal, Annotated
-from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional, Union, Annotated
+from pydantic import BaseModel, Field
 
 from llm_easy_tools import get_function_schema, LLMFunction
-from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
+from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_tool_defs
 
 from pprint import pprint
 
 
 def simple_function(count: int, size: Optional[float] = None):
-    """simple function does something"""
+    """Simple function does something."""
     pass
 
 
@@ -23,7 +23,7 @@ def simple_function_no_docstring(
 def test_function_schema():
     function_schema = get_function_schema(simple_function)
     assert function_schema['name'] == 'simple_function'
-    assert function_schema['description'] == 'simple function does something'
+    assert function_schema['description'] == 'Simple function does something.'
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
     assert params_schema['type'] == "object"
@@ -61,7 +61,7 @@ def test_nested():
         size: Optional[float] = None
 
     class Bar(BaseModel):
-        """Some Bar"""
+        """Some Bar."""
         apple: str = Field(description="The apple")
         banana: str = Field(description="The banana")
 
@@ -70,12 +70,12 @@ def test_nested():
         bar: Bar
 
     def nested_structure_function(foo: Foo, bars: List[Bar]):
-        """spams everything"""
+        """Spams everything."""
         pass
 
     function_schema = get_function_schema(nested_structure_function)
     assert function_schema['name'] == 'nested_structure_function'
-    assert function_schema['description'] == 'spams everything'
+    assert function_schema['description'] == 'Spams everything.'
     assert len(function_schema['parameters']['properties']) == 2
 
     function_schema = get_function_schema(FooAndBar)
@@ -86,21 +86,21 @@ def test_nested():
 def test_methods():
     class ExampleClass:
         def simple_method(self, count: int, size: Optional[float] = None):
-            """simple method does something"""
+            """Simple method does something."""
             pass
 
     example_object = ExampleClass()
 
     function_schema = get_function_schema(example_object.simple_method)
     assert function_schema['name'] == 'simple_method'
-    assert function_schema['description'] == 'simple method does something'
+    assert function_schema['description'] == 'Simple method does something.'
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
 
 
 def test_LLMFunction():
     def new_simple_function(count: int, size: Optional[float] = None):
-        """simple function does something"""
+        """Simple function does something."""
         pass
 
     func = LLMFunction(new_simple_function, name='changed_name')
@@ -115,26 +115,26 @@ def test_LLMFunction():
 
 def test_model_init_function():
     class User(BaseModel):
-        """A user object"""
+        """A user object."""
         name: str
         city: str
 
     function_schema = get_function_schema(User)
     assert function_schema['name'] == 'User'
-    assert function_schema['description'] == 'A user object'
+    assert function_schema['description'] == 'A user object.'
     assert len(function_schema['parameters']['properties']) == 2
     assert len(function_schema['parameters']['required']) == 2
 
     new_function = LLMFunction(User, name="extract_user_details")
     assert new_function.schema['name'] == 'extract_user_details'
-    assert new_function.schema['description'] == 'A user object'
+    assert new_function.schema['description'] == 'A user object.'
     assert len(new_function.schema['parameters']['properties']) == 2
     assert len(new_function.schema['parameters']['required']) == 2
 
 
 def test_case_insensitivity():
     class User(BaseModel):
-        """A user object"""
+        """A user object."""
         name: str
         city: str
 
