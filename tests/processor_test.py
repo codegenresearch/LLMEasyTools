@@ -10,13 +10,13 @@ from llm_easy_tools.processor import process_response, process_tool_call, ToolRe
 from llm_easy_tools import LLMFunction
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
-def mk_tool_call(name, args):
+def mk_tool_call(name: str, args: dict) -> SimpleToolCall:
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=json.dumps(args)), type='function')
 
-def mk_tool_call_jason(name, args):
+def mk_tool_call_jason(name: str, args: str) -> SimpleToolCall:
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=args), type='function')
 
-def mk_chat_completion(tool_calls):
+def mk_chat_completion(tool_calls: List[SimpleToolCall]) -> SimpleCompletion:
     return SimpleCompletion(
         id='A',
         created=0,
@@ -71,7 +71,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: list[Company]) -> list[Company]:
+    def print_companies(companies: List[Company]) -> List[Company]:
         return companies
 
     company_list = [{
