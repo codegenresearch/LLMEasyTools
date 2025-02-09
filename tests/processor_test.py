@@ -1,7 +1,7 @@
-import pytest
 import json
+import pytest
 from time import sleep, time
-from typing import Any, Optional, List
+from typing import Any, Optional
 from pydantic import BaseModel, Field, ValidationError
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
@@ -71,7 +71,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: List[Company]):
+    def print_companies(companies: list[Company]):
         return companies
 
     company_list = [{
@@ -112,7 +112,7 @@ def test_json_fix():
 
 def test_list_in_string_fix():
     class User(BaseModel):
-        names: Optional[List[str]]
+        names: Optional[list[str]]
 
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
