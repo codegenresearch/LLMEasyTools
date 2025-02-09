@@ -1,5 +1,5 @@
 import inspect
-from typing import Annotated, Callable, Dict, Any, get_origin, Type, Union
+from typing import Annotated, Callable, Dict, Any, get_origin, Type, Union, List
 from typing_extensions import TypeGuard
 
 import copy
@@ -11,7 +11,7 @@ from pprint import pprint
 import sys
 
 class LLMFunction:
-    def __init__(self, func, schema=None, name=None, description=None, strict=False):
+    def __init__(self, func: Callable, schema: Dict[str, Any] = None, name: str = None, description: str = None, strict: bool = False):
         """
         Initializes an LLMFunction instance.
 
@@ -40,7 +40,7 @@ class LLMFunction:
             if description:
                 self.schema['description'] = description
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Any:
         """
         Calls the wrapped function with the provided arguments.
 
@@ -53,7 +53,7 @@ class LLMFunction:
         """
         return self.func(*args, **kwargs)
 
-def tool_def(function_schema):
+def tool_def(function_schema: Dict[str, Any]) -> Dict[str, Any]:
     """
     Creates a tool definition dictionary from a function schema.
 
@@ -69,12 +69,12 @@ def tool_def(function_schema):
     }
 
 def get_tool_defs(
-        functions,
-        case_insensitive=False,
-        prefix_class=None,
-        prefix_schema_name=True,
-        strict=False
-):
+        functions: List[Union[Callable, LLMFunction]],
+        case_insensitive: bool = False,
+        prefix_class: Type[BaseModel] = None,
+        prefix_schema_name: bool = True,
+        strict: bool = False
+) -> List[Dict[str, Any]]:
     """
     Generates tool definitions for a list of functions or LLMFunctions.
 
@@ -100,7 +100,7 @@ def get_tool_defs(
         result.append(tool_def(fun_schema))
     return result
 
-def parameters_basemodel_from_function(function):
+def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]:
     """
     Creates a Pydantic BaseModel from the parameters of a function.
 
@@ -128,7 +128,7 @@ def parameters_basemodel_from_function(function):
         fields[name] = (type_, pd.Field(default, description=description))
     return pd.create_model(f'{function.__name__}_ParameterModel', **fields)
 
-def _recursive_purge_titles(d):
+def _recursive_purge_titles(d: Dict[str, Any]) -> None:
     """
     Recursively removes 'title' keys from a dictionary.
 
@@ -142,7 +142,7 @@ def _recursive_purge_titles(d):
             else:
                 _recursive_purge_titles(d[key])
 
-def get_name(func, case_insensitive=False):
+def get_name(func: Union[Callable, LLMFunction], case_insensitive: bool = False) -> str:
     """
     Retrieves the name of a function or LLMFunction.
 
@@ -156,7 +156,7 @@ def get_name(func, case_insensitive=False):
     schema_name = func.schema['name'] if isinstance(func, LLMFunction) else func.__name__
     return schema_name.lower() if case_insensitive else schema_name
 
-def get_function_schema(function, case_insensitive=False, strict=False):
+def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive: bool = False, strict: bool = False) -> Dict[str, Any]:
     """
     Generates a function schema from a function or LLMFunction.
 
@@ -176,7 +176,7 @@ def get_function_schema(function, case_insensitive=False, strict=False):
     description = function.__doc__.strip() if function.__doc__ else ''
     schema_name = get_name(function, case_insensitive)
 
-    function_schema = {
+    function_schema: Dict[str, Any] = {
         'name': schema_name,
         'description': description,
     }
@@ -190,7 +190,7 @@ def get_function_schema(function, case_insensitive=False, strict=False):
 
     return function_schema
 
-def to_strict_json_schema(schema):
+def to_strict_json_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
     """
     Converts a JSON schema to a strict JSON schema.
 
@@ -202,7 +202,7 @@ def to_strict_json_schema(schema):
     """
     return _ensure_strict_json_schema(schema, ())
 
-def _ensure_strict_json_schema(json_schema, path):
+def _ensure_strict_json_schema(json_schema: Dict[str, Any], path: tuple) -> Dict[str, Any]:
     """
     Ensures a JSON schema conforms to the strict standard.
 
@@ -244,7 +244,7 @@ def _ensure_strict_json_schema(json_schema, path):
 
     return json_schema
 
-def is_dict(obj):
+def is_dict(obj: Any) -> TypeGuard[Dict[str, Any]]:
     """
     Checks if an object is a dictionary.
 
@@ -256,7 +256,7 @@ def is_dict(obj):
     """
     return isinstance(obj, dict)
 
-def insert_prefix(prefix_class, schema, prefix_schema_name=True, case_insensitive=False):
+def insert_prefix(prefix_class: Type[BaseModel], schema: Dict[str, Any], prefix_schema_name: bool = True, case_insensitive: bool = False) -> Dict[str, Any]:
     """
     Inserts a prefix class schema into a function schema.
 
