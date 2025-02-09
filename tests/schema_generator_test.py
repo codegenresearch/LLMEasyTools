@@ -3,6 +3,7 @@ from typing import List, Optional, Union, Annotated
 from pydantic import BaseModel, Field
 from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_name, get_tool_defs
+from pprint import pprint
 
 def simple_function(count: int, size: Optional[float] = None):
     """Simple function does something."""
@@ -95,6 +96,24 @@ def test_LLMFunction():
     func = LLMFunction(simple_function, strict=True)
     function_schema = func.schema
     assert function_schema['strict'] == True
+
+def insert_prefix(prefix_model: BaseModel, function_schema: dict, case_insensitive: bool = False) -> dict:
+    prefix_schema = prefix_model.schema()
+    new_name = f"{prefix_schema['title']}_and_{function_schema['name']}"
+    if case_insensitive:
+        new_name = new_name.lower()
+    new_properties = {**prefix_schema['properties'], **function_schema['parameters']['properties']}
+    new_required = prefix_schema.get('required', []) + function_schema['parameters'].get('required', [])
+    new_schema = {
+        'name': new_name,
+        'description': function_schema['description'],
+        'parameters': {
+            'type': 'object',
+            'properties': new_properties,
+            'required': new_required
+        }
+    }
+    return new_schema
 
 def test_merge_schemas():
     class Reflection(BaseModel):
