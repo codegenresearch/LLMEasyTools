@@ -9,7 +9,7 @@ from pprint import pprint
 
 
 def simple_function(count: int, size: Optional[float] = None):
-    """Simple function does something."""
+    """simple function does something."""
     pass
 
 
@@ -23,7 +23,7 @@ def simple_function_no_docstring(
 def test_function_schema():
     function_schema = get_function_schema(simple_function)
     assert function_schema['name'] == 'simple_function'
-    assert function_schema['description'] == 'Simple function does something.'
+    assert function_schema['description'] == 'simple function does something.'
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
     assert params_schema['type'] == "object"
@@ -37,7 +37,7 @@ def test_function_schema():
 def test_noparams():
     def function_with_no_params():
         """
-        This function has a docstring and takes no parameters.
+        this function has a docstring and takes no parameters.
         """
         pass
 
@@ -46,7 +46,7 @@ def test_noparams():
 
     result = get_function_schema(function_with_no_params)
     assert result['name'] == 'function_with_no_params'
-    assert result['description'] == "This function has a docstring and takes no parameters."
+    assert result['description'] == "this function has a docstring and takes no parameters."
     assert result['parameters']['properties'] == {}
 
     result = get_function_schema(function_no_doc)
@@ -61,21 +61,21 @@ def test_nested():
         size: Optional[float] = None
 
     class Bar(BaseModel):
-        """Some Bar."""
-        apple: str = Field(description="The apple")
-        banana: str = Field(description="The banana")
+        """some bar."""
+        apple: str = Field(description="the apple")
+        banana: str = Field(description="the banana")
 
     class FooAndBar(BaseModel):
         foo: Foo
         bar: Bar
 
     def nested_structure_function(foo: Foo, bars: List[Bar]):
-        """Spams everything."""
+        """spams everything."""
         pass
 
     function_schema = get_function_schema(nested_structure_function)
     assert function_schema['name'] == 'nested_structure_function'
-    assert function_schema['description'] == 'Spams everything.'
+    assert function_schema['description'] == 'spams everything.'
     assert len(function_schema['parameters']['properties']) == 2
 
     function_schema = get_function_schema(FooAndBar)
@@ -86,21 +86,21 @@ def test_nested():
 def test_methods():
     class ExampleClass:
         def simple_method(self, count: int, size: Optional[float] = None):
-            """Simple method does something."""
+            """simple method does something."""
             pass
 
     example_object = ExampleClass()
 
     function_schema = get_function_schema(example_object.simple_method)
     assert function_schema['name'] == 'simple_method'
-    assert function_schema['description'] == 'Simple method does something.'
+    assert function_schema['description'] == 'simple method does something.'
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
 
 
 def test_LLMFunction():
     def new_simple_function(count: int, size: Optional[float] = None):
-        """Simple function does something."""
+        """simple function does something."""
         pass
 
     func = LLMFunction(new_simple_function, name='changed_name')
@@ -115,44 +115,36 @@ def test_LLMFunction():
 
 def test_model_init_function():
     class User(BaseModel):
-        """A user object."""
+        """a user object."""
         name: str
         city: str
 
     function_schema = get_function_schema(User)
     assert function_schema['name'] == 'User'
-    assert function_schema['description'] == 'A user object.'
+    assert function_schema['description'] == 'a user object.'
     assert len(function_schema['parameters']['properties']) == 2
     assert len(function_schema['parameters']['required']) == 2
 
     new_function = LLMFunction(User, name="extract_user_details")
     assert new_function.schema['name'] == 'extract_user_details'
-    assert new_function.schema['description'] == 'A user object.'
+    assert new_function.schema['description'] == 'a user object.'
     assert len(new_function.schema['parameters']['properties']) == 2
     assert len(new_function.schema['parameters']['required']) == 2
 
 
-def get_name(func, case_insensitive=False):
-    schema_name = func.__name__
-    if case_insensitive:
-        schema_name = schema_name.lower()
-    return schema_name
-
-
 def test_case_insensitivity():
     class User(BaseModel):
-        """A user object."""
+        """a user object."""
         name: str
         city: str
 
     function_schema = get_function_schema(User, case_insensitive=True)
     assert function_schema['name'] == 'user'
-    assert get_name(User, case_insensitive=True) == 'user'
 
 
 def test_function_no_type_annotation():
     def function_with_missing_type(param):
-        return f"Value is {param}"
+        return f"value is {param}"
 
     with pytest.raises(ValueError) as exc_info:
         get_function_schema(function_with_missing_type)
