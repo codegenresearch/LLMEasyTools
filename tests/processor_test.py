@@ -4,7 +4,7 @@ from time import sleep, time
 
 from unittest.mock import Mock
 from pydantic import BaseModel, Field, ValidationError
-from typing import Any, Optional
+from typing import Any, Optional, List
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
 from llm_easy_tools import LLMFunction
@@ -29,13 +29,13 @@ def mk_chat_completion(tool_calls):
 
 def test_process_methods():
     class TestTool:
-        def tool_method(self, arg):
+        def tool_method(self, arg: int) -> str:
             return f'executed tool_method with param: {arg}'
 
-        def no_output(self, arg):
+        def no_output(self, arg: int) -> None:
             pass
 
-        def failing_method(self, arg):
+        def failing_method(self, arg: int) -> str:
             raise Exception('Some exception')
 
     tool = TestTool()
@@ -68,7 +68,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies):
+    def print_companies(companies: List[Company]) -> List[Company]:
         return companies
 
     company_list = [{
@@ -89,9 +89,7 @@ def test_json_fix():
         age: int
 
     original_user = UserDetail(name="John", age=21)
-    json_data = json.dumps(original_user.model_dump())
-    json_data = json_data[:-1] + ',}'
-    tool_call = mk_tool_call("UserDetail", json_data)
+    tool_call = mk_tool_call("UserDetail", original_user.model_dump())
     result = process_tool_call(tool_call, [UserDetail])
     assert result.output == original_user
     assert len(result.soft_errors) > 0
@@ -109,7 +107,7 @@ def test_json_fix():
 
 def test_list_in_string_fix():
     class User(BaseModel):
-        names: Optional[list[str]]
+        names: Optional[List[str]]
 
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
@@ -138,7 +136,7 @@ def test_parallel_tools():
         def __init__(self):
             self.counter = 0
 
-        def increment_counter(self):
+        def increment_counter(self) -> None:
             self.counter += 1
             sleep(1)
 
