@@ -27,7 +27,7 @@ class ToolResult:
         error (Optional[Exception]): An error message if the tool call failed.
         stack_trace (Optional[str]): The stack trace if the tool call failed.
         soft_errors (list[Exception]): A list of non-critical error messages encountered during the tool call.
-        prefix (Optional[BaseModel]): The Pydantic model instance used as a prefix in the tool call, if applicable.
+        arguments (Optional[dict[str, Any]]): The arguments passed to the tool call.
         tool (Optional[Union[Callable, BaseModel]]): The function or model that was called.
 
     Methods:
@@ -39,7 +39,7 @@ class ToolResult:
     error: Optional[Exception] = None
     stack_trace: Optional[str] = None
     soft_errors: list[Exception] = field(default_factory=list)
-    prefix: Optional[BaseModel] = None
+    arguments: Optional[dict[str, Any]] = None
     tool: Optional[Union[Callable, BaseModel]] = None
 
     def to_message(self) -> dict[str, str]:
@@ -64,14 +64,13 @@ class ToolResult:
             "content": content,
         }
 
-def process_tool_call(tool_call, functions_or_models, prefix_class=None, fix_json_args=True, case_insensitive=False) -> ToolResult:
+def process_tool_call(tool_call, functions_or_models, fix_json_args=True, case_insensitive=False) -> ToolResult:
     """
     Processes a single tool call by matching it to a function or model and executing it.
 
     Args:
         tool_call (ChatCompletionMessageToolCall): The tool call to process.
         functions_or_models (list[Union[Callable, BaseModel]]): A list of functions or models to match against.
-        prefix_class (Optional[BaseModel]): A Pydantic model class to use as a prefix for the tool call.
         fix_json_args (bool): Whether to attempt to fix JSON decoding errors in the tool call arguments.
         case_insensitive (bool): Whether to perform case-insensitive matching of tool names.
 
@@ -84,7 +83,6 @@ def process_tool_call(tool_call, functions_or_models, prefix_class=None, fix_jso
     soft_errors: list[Exception] = []
     error = None
     stack_trace = None
-    prefix = None
     output = None
     tool = None
 
@@ -109,22 +107,9 @@ def process_tool_call(tool_call, functions_or_models, prefix_class=None, fix_jso
             error=error,
             stack_trace=stack_trace,
             soft_errors=soft_errors,
-            prefix=None,
+            arguments=None,
             tool=None,
         )
-
-    if prefix_class is not None:
-        try:
-            prefix = _extract_prefix_unpacked(tool_args, prefix_class)
-        except ValidationError as e:
-            soft_errors.append(e)
-        prefix_name = prefix_class.__name__
-        if case_insensitive:
-            prefix_name = prefix_name.lower()
-        if not tool_name.startswith(prefix_name):
-            soft_errors.append(NoMatchingTool(f"Trying to decode function call with a name '{tool_name}' not matching prefix '{prefix_name}'"))
-        else:
-            tool_name = tool_name[len(prefix_name + '_and_'):]
 
     for f in functions_or_models:
         if get_name(f, case_insensitive=case_insensitive) == tool_name:
@@ -146,7 +131,7 @@ def process_tool_call(tool_call, functions_or_models, prefix_class=None, fix_jso
         error=error,
         stack_trace=stack_trace,
         soft_errors=soft_errors,
-        prefix=prefix,
+        arguments=tool_args,
         tool=tool,
     )
 
@@ -214,24 +199,6 @@ def _is_list_type(annotation):
         return any(_is_list_type(arg) for arg in args)
     return False
 
-def _extract_prefix_unpacked(tool_args, prefix_class):
-    """
-    Extracts the prefix arguments from the tool arguments and creates a prefix instance.
-
-    Args:
-        tool_args (dict[str, Any]): The tool arguments.
-        prefix_class (BaseModel): The Pydantic model class to use as a prefix.
-
-    Returns:
-        BaseModel: An instance of the prefix class.
-    """
-    prefix_args = {}
-    for key in list(tool_args.keys()):
-        if key in prefix_class.__annotations__:
-            prefix_args[key] = tool_args.pop(key)
-    prefix = prefix_class(**prefix_args)
-    return prefix
-
 def process_response(response: ChatCompletion, functions: list[Union[Callable, LLMFunction]], choice_num=0, **kwargs) -> list[ToolResult]:
     """
     Processes a ChatCompletion response, executing contained tool calls.
@@ -250,7 +217,6 @@ def process_response(response: ChatCompletion, functions: list[Union[Callable, L
 def process_message(
     message: ChatCompletionMessage,
     functions: list[Union[Callable, LLMFunction]],
-    prefix_class=None,
     fix_json_args=True,
     case_insensitive=False,
     executor: Optional[Union[ThreadPoolExecutor, ProcessPoolExecutor]]=None
@@ -261,7 +227,6 @@ def process_message(
     Args:
         message (ChatCompletionMessage): The message containing tool calls.
         functions (list[Union[Callable, LLMFunction]]): A list of functions or models to call.
-        prefix_class (Optional[BaseModel]): A Pydantic model class to use as a prefix for the tool call.
         fix_json_args (bool): Whether to attempt to fix JSON decoding errors in the tool call arguments.
         case_insensitive (bool): Whether to perform case-insensitive matching of tool names.
         executor (Optional[Union[ThreadPoolExecutor, ProcessPoolExecutor]]): An executor to use for parallel processing.
@@ -279,7 +244,7 @@ def process_message(
 
     if not tool_calls:
         return []
-    args_list = [(tool_call, functions, prefix_class, fix_json_args, case_insensitive) for tool_call in tool_calls]
+    args_list = [(tool_call, functions, fix_json_args, case_insensitive) for tool_call in tool_calls]
 
     if executor:
         results = list(executor.map(lambda args: process_tool_call(*args), args_list))
@@ -291,7 +256,6 @@ def process_one_tool_call(
         response: ChatCompletion,
         functions: list[Union[Callable, LLMFunction]],
         index: int = 0,
-        prefix_class=None,
         fix_json_args=True,
         case_insensitive=False
     ) -> Optional[ToolResult]:
@@ -302,7 +266,6 @@ def process_one_tool_call(
         response (ChatCompletion): The response object containing tool calls.
         functions (list[Union[Callable, LLMFunction]]): A list of functions or models to call.
         index (int, optional): The index of the tool call to process. Defaults to 0.
-        prefix_class (Optional[BaseModel]): A Pydantic model class to use as a prefix for the tool call.
         fix_json_args (bool): Whether to attempt to fix JSON decoding errors in the tool call arguments.
         case_insensitive (bool): Whether to perform case-insensitive matching of tool names.
 
@@ -313,7 +276,7 @@ def process_one_tool_call(
     if not tool_calls or index >= len(tool_calls):
         return None
 
-    return process_tool_call(tool_calls[index], functions, prefix_class, fix_json_args, case_insensitive)
+    return process_tool_call(tool_calls[index], functions, fix_json_args, case_insensitive)
 
 def _get_tool_calls(response: ChatCompletion) -> list[ChatCompletionMessageToolCall]:
     """
