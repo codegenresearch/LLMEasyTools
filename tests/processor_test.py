@@ -1,7 +1,7 @@
 import json
 import pytest
 from time import sleep, time
-from typing import Any, Optional, list
+from typing import Any, Optional
 from pydantic import BaseModel, Field, ValidationError
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
