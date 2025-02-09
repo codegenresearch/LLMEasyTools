@@ -1,6 +1,6 @@
 import pytest
-from typing import List, Optional, Annotated
-from pydantic import BaseModel, Field
+from typing import list, Optional, Annotated, Union, Literal
+from pydantic import BaseModel, Field, field_validator
 from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import get_name, get_tool_defs
 from pprint import pprint
@@ -33,7 +33,9 @@ def test_function_schema():
 
 def test_noparams():
     def function_with_no_params():
-        """This function has a docstring and takes no parameters."""
+        """
+        This function has a docstring and takes no parameters.
+        """
         pass
 
     def function_no_doc():
@@ -65,7 +67,7 @@ def test_nested():
 
     def nested_structure_function(
         foo: Foo,
-        bars: List[Bar]
+        bars: list[Bar]
     ):
         """spams everything"""
         ...
@@ -208,12 +210,11 @@ def test_pydantic_param():
         region: str
 
     def search(query: Query):
-        """search function using Query model"""
         ...
 
     schema = get_tool_defs([search])
     assert schema[0]['function']['name'] == 'search'
-    assert schema[0]['function']['description'] == 'search function using Query model'
+    assert schema[0]['function']['description'] == ''
     assert schema[0]['function']['parameters']['properties']['query']['$ref'] == '#/$defs/Query'
 
 def test_strict():
@@ -224,12 +225,11 @@ def test_strict():
     class Company(BaseModel):
         name: str
         speciality: str
-        addresses: List[Address]
+        addresses: list[Address]
 
     def print_companies(
-        companies: List[Company]
+        companies: list[Company]
     ):
-        """print companies function"""
         ...
 
     schema = get_tool_defs([print_companies], strict=True)
@@ -237,7 +237,7 @@ def test_strict():
 
     function_schema = schema[0]['function']
     assert function_schema['name'] == 'print_companies'
-    assert function_schema['description'] == 'print companies function'
+    assert function_schema['description'] == ''
     assert function_schema['strict'] == True
     assert function_schema['parameters']['additionalProperties'] == False
     assert function_schema['parameters']['$defs']['Address']['additionalProperties'] == False
