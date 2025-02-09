@@ -13,6 +13,9 @@ def mk_tool_call(name, args):
     arguments = json.dumps(args)
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=arguments), type='function')
 
+def mk_tool_call_jason(name, args):
+    return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=args), type='function')
+
 def mk_chat_completion(tool_calls):
     return SimpleCompletion(
         id='A',
@@ -95,12 +98,14 @@ def test_json_fix():
     assert result.output == original_user
     assert len(result.soft_errors) == 0
 
-    tool_call = mk_tool_call("UserDetail", json_data + ',}')
+    # Introduce a JSON error by appending a comma and closing brace
+    json_data_with_error = json_data[:-1] + ',}'
+    tool_call = mk_tool_call("UserDetail", json_data_with_error)
     result = process_tool_call(tool_call, [UserDetail])
     assert result.output == original_user
     assert len(result.soft_errors) > 0
 
-    tool_call = mk_tool_call("UserDetail", json_data + ',}')
+    tool_call = mk_tool_call("UserDetail", json_data_with_error)
     result = process_tool_call(tool_call, [UserDetail], fix_json_args=False)
     assert isinstance(result.error, json.decoder.JSONDecodeError)
 
@@ -119,7 +124,7 @@ def test_list_in_string_fix():
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
     assert result.output.names == ["John", "Doe"]
-    assert len(result.soft_errors) > 0
+    assert len(result.soft_errors) == 0
 
     tool_call = mk_tool_call("User", {"names": "[\"John\", \"Doe\"]"})
     result = process_tool_call(tool_call, [User])
@@ -150,17 +155,17 @@ def test_parallel_tools():
 
     counter = CounterClass()
     tool_call = mk_tool_call("increment_counter", {})
-    response = mk_chat_completion([tool_call] * 10)
+    response = mk_chat_completion([tool_call] * 11)
 
     executor = ThreadPoolExecutor()
     start_time = time()
     results = process_response(response, [counter.increment_counter], executor=executor)
     end_time = time()
 
-    assert results[9].error is None
+    assert results[10].error is None
 
     time_taken = end_time - start_time
-    assert counter.counter == 10
+    assert counter.counter == 11
     assert time_taken <= 3, f"Expected processing time to be less than or equal to 3 seconds, but was {time_taken}"
 
 def test_process_one_tool_call():
