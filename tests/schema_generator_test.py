@@ -132,6 +132,13 @@ def test_model_init_function():
     assert len(new_function.schema['parameters']['required']) == 2
 
 
+def get_name(func, case_insensitive=False):
+    schema_name = func.__name__
+    if case_insensitive:
+        schema_name = schema_name.lower()
+    return schema_name
+
+
 def test_case_insensitivity():
     class User(BaseModel):
         """A user object."""
