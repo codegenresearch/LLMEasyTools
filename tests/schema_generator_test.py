@@ -9,20 +9,19 @@ def simple_function(
     count: int,
     size: Optional[float] = None
 ):
-    """Simple function does something"""
+    """simple function does something"""
     pass
 
 def simple_function_no_docstring(
     apple: Annotated[str, 'The apple'],
     banana: Annotated[str, 'The banana']
 ):
-    """Function with annotated parameters"""
     pass
 
 def test_function_schema():
     function_schema = get_function_schema(simple_function)
     assert function_schema['name'] == 'simple_function'
-    assert function_schema['description'] == 'Simple function does something'
+    assert function_schema['description'] == 'simple function does something'
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
     assert params_schema['type'] == "object"
@@ -34,7 +33,7 @@ def test_function_schema():
 
 def test_noparams():
     def function_with_no_params():
-        """This function has a docstring and takes no parameters"""
+        """This function has a docstring and takes no parameters."""
         pass
 
     def function_no_doc():
@@ -42,7 +41,7 @@ def test_noparams():
 
     result = get_function_schema(function_with_no_params)
     assert result['name'] == 'function_with_no_params'
-    assert result['description'] == "This function has a docstring and takes no parameters"
+    assert result['description'] == "This function has a docstring and takes no parameters."
     assert result['parameters']['properties'] == {}
 
     result = get_function_schema(function_no_doc)
@@ -68,12 +67,12 @@ def test_nested():
         foo: Foo,
         bars: List[Bar]
     ):
-        """Spams everything"""
-        pass
+        """spams everything"""
+        ...
 
     function_schema = get_function_schema(nested_structure_function)
     assert function_schema['name'] == 'nested_structure_function'
-    assert function_schema['description'] == 'Spams everything'
+    assert function_schema['description'] == 'spams everything'
     assert len(function_schema['parameters']['properties']) == 2
 
     function_schema = get_function_schema(FooAndBar)
@@ -87,13 +86,13 @@ def test_methods():
             count: int,
             size: Optional[float] = None
         ):
-            """Simple method does something"""
-            pass
+            """simple method does something"""
+            ...
 
     example_object = ExampleClass()
     function_schema = get_function_schema(example_object.simple_method)
     assert function_schema['name'] == 'simple_method'
-    assert function_schema['description'] == 'Simple method does something'
+    assert function_schema['description'] == 'simple method does something'
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
 
@@ -102,8 +101,8 @@ def test_LLMFunction():
         count: int,
         size: Optional[float] = None
     ):
-        """Simple function does something"""
-        pass
+        """simple function does something"""
+        ...
 
     func = LLMFunction(new_simple_function, name='changed_name')
     function_schema = func.schema
@@ -153,7 +152,7 @@ def test_merge_schemas():
 
 def test_noparams_function_merge():
     def function_no_params():
-        pass
+        ...
 
     class Reflection(BaseModel):
         relevancy: str = Field(..., description="Was the last retrieved information relevant and why")
@@ -209,12 +208,12 @@ def test_pydantic_param():
         region: str
 
     def search(query: Query):
-        """Search function using Query model"""
-        pass
+        """search function using Query model"""
+        ...
 
     schema = get_tool_defs([search])
     assert schema[0]['function']['name'] == 'search'
-    assert schema[0]['function']['description'] == 'Search function using Query model'
+    assert schema[0]['function']['description'] == 'search function using Query model'
     assert schema[0]['function']['parameters']['properties']['query']['$ref'] == '#/$defs/Query'
 
 def test_strict():
@@ -230,15 +229,15 @@ def test_strict():
     def print_companies(
         companies: List[Company]
     ):
-        """Print companies function"""
-        pass
+        """print companies function"""
+        ...
 
     schema = get_tool_defs([print_companies], strict=True)
     pprint(schema)
 
     function_schema = schema[0]['function']
     assert function_schema['name'] == 'print_companies'
-    assert function_schema['description'] == 'Print companies function'
+    assert function_schema['description'] == 'print companies function'
     assert function_schema['strict'] == True
     assert function_schema['parameters']['additionalProperties'] == False
     assert function_schema['parameters']['$defs']['Address']['additionalProperties'] == False
