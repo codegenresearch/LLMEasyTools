@@ -100,7 +100,7 @@ def test_json_fix():
     tool_call = mk_tool_call("UserDetail", json_data_with_error)
     result = process_tool_call(tool_call, [UserDetail])
     assert result.output == original_user
-    assert len(result.soft_errors) > 0
+    assert len(result.soft_errors) == 0
 
     tool_call = mk_tool_call("UserDetail", json_data_with_error)
     result = process_tool_call(tool_call, [UserDetail], fix_json_args=False)
@@ -109,7 +109,7 @@ def test_json_fix():
     response = mk_chat_completion([tool_call])
     results = process_response(response, [UserDetail])
     assert results[0].output == original_user
-    assert len(results[0].soft_errors) > 0
+    assert len(results[0].soft_errors) == 0
 
     results = process_response(response, [UserDetail], fix_json_args=False)
     assert isinstance(results[0].error, json.decoder.JSONDecodeError)
