@@ -1,6 +1,6 @@
 import pytest
-from typing import List, Optional, Union, Annotated
-from pydantic import BaseModel, Field
+from typing import List, Optional, Union, Annotated, Literal
+from pydantic import BaseModel, Field, field_validator
 from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_name, get_tool_defs
 from pprint import pprint
@@ -104,16 +104,34 @@ def test_LLMFunction():
     func = LLMFunction(new_simple_function, name='changed_name')
     function_schema = func.schema
     assert function_schema['name'] == 'changed_name'
-    assert not function_schema.get('strict')
+    assert 'strict' not in function_schema or function_schema['strict'] is False
 
     func = LLMFunction(simple_function, strict=True)
     function_schema = func.schema
-    assert function_schema['strict'] == True
+    assert function_schema['strict'] is True
+
+
+def insert_prefix(prefix_model: BaseModel, function_schema: dict, case_insensitive: bool = False) -> dict:
+    prefix_schema = prefix_model.schema()
+    new_name = f"{prefix_schema['title']}_and_{function_schema['name']}" if not case_insensitive else f"{prefix_schema['title'].lower()}_and_{function_schema['name'].lower()}"
+    new_properties = {**prefix_schema['properties'], **function_schema['parameters']['properties']}
+    new_required = prefix_schema.get('required', []) + function_schema['parameters'].get('required', [])
+
+    new_schema = {
+        'name': new_name,
+        'description': function_schema['description'],
+        'parameters': {
+            'type': 'object',
+            'properties': new_properties,
+            'required': new_required
+        }
+    }
+    return new_schema
 
 
 def test_merge_schemas():
     class Reflection(BaseModel):
-        relevancy: str = Field(..., description="Whas the last retrieved information relevant and why?")
+        relevancy: str = Field(..., description="Was the last retrieved information relevant and why?")
         next_actions_plan: str = Field(..., description="What you plan to do next and why")
 
     function_schema = get_function_schema(simple_function)
@@ -136,7 +154,7 @@ def test_noparams_function_merge():
         pass
 
     class Reflection(BaseModel):
-        relevancy: str = Field(..., description="Whas the last retrieved information relevant and why?")
+        relevancy: str = Field(..., description="Was the last retrieved information relevant and why?")
         next_actions_plan: str = Field(..., description="What you plan to do next and why")
 
     function_schema = get_function_schema(function_no_params)
@@ -223,8 +241,8 @@ def test_strict():
     function_schema = schema[0]['function']
 
     assert function_schema['name'] == 'print_companies'
-    assert function_schema['strict'] == True
-    assert function_schema['parameters']['additionalProperties'] == False
-    assert function_schema['parameters']['$defs']['Address']['additionalProperties'] == False
+    assert function_schema['strict'] is True
+    assert function_schema['parameters']['additionalProperties'] is False
+    assert function_schema['parameters']['$defs']['Address']['additionalProperties'] is False
     assert function_schema['parameters']['$defs']['Address']['properties']['street']['type'] == 'string'
-    assert function_schema['parameters']['$defs']['Company']['additionalProperties'] == False
+    assert function_schema['parameters']['$defs']['Company']['additionalProperties'] is False
