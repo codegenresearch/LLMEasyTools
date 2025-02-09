@@ -4,7 +4,7 @@ from time import sleep, time
 
 from unittest.mock import Mock
 from pydantic import BaseModel, Field, ValidationError
-from typing import Any, Optional, List
+from typing import Any, Optional, list
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
 from llm_easy_tools import LLMFunction
@@ -32,13 +32,13 @@ def mk_chat_completion(tool_calls):
 
 def test_process_methods():
     class TestTool:
-        def tool_method(self, arg: int) -> str:
+        def tool_method(self, arg: int):
             return f'executed tool_method with param: {arg}'
 
-        def no_output(self, arg: int) -> None:
+        def no_output(self, arg: int):
             pass
 
-        def failing_method(self, arg: int) -> str:
+        def failing_method(self, arg: int):
             raise Exception('Some exception')
 
     tool = TestTool()
@@ -71,7 +71,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: List[Company]) -> List[Company]:
+    def print_companies(companies: list[Company]):
         return companies
 
     company_list = [{
@@ -113,7 +113,7 @@ def test_json_fix():
 
 def test_list_in_string_fix():
     class User(BaseModel):
-        names: Optional[List[str]]
+        names: Optional[list[str]]
 
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
@@ -142,7 +142,7 @@ def test_parallel_tools():
         def __init__(self):
             self.counter = 0
 
-        def increment_counter(self) -> None:
+        def increment_counter(self):
             self.counter += 1
             sleep(1)
 
