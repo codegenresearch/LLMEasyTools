@@ -10,6 +10,7 @@ def simple_function(count: int, size: Optional[float] = None):
     pass
 
 def simple_function_no_docstring(apple: Annotated[str, 'The apple'], banana: Annotated[str, 'The banana']):
+    """Function with annotated parameters."""
     pass
 
 def test_function_schema():
@@ -192,11 +193,12 @@ def test_pydantic_param():
         region: str
 
     def search(query: Query):
-        ...
+        """Search function using Query model."""
+        pass
 
     schema = get_tool_defs([search])
     assert schema[0]['function']['name'] == 'search'
-    assert schema[0]['function']['description'] == ''
+    assert schema[0]['function']['description'] == 'Search function using Query model.'
     assert schema[0]['function']['parameters']['properties']['query']['$ref'] == '#/$defs/Query'
 
 def test_strict():
@@ -210,13 +212,15 @@ def test_strict():
         addresses: List[Address]
 
     def print_companies(companies: List[Company]):
-        ...
+        """Print companies function."""
+        pass
 
     schema = get_tool_defs([print_companies], strict=True)
     pprint(schema)
 
     function_schema = schema[0]['function']
     assert function_schema['name'] == 'print_companies'
+    assert function_schema['description'] == 'Print companies function.'
     assert function_schema['strict'] == True
     assert function_schema['parameters']['additionalProperties'] == False
     assert function_schema['parameters']['$defs']['Address']['additionalProperties'] == False
