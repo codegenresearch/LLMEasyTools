@@ -13,7 +13,7 @@ def mk_tool_call(name, args):
     arguments = json.dumps(args)
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=arguments), type='function')
 
-def mk_tool_call_json(name, args):
+def mk_tool_call_jason(name, args):
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=args), type='function')
 
 def mk_chat_completion(tool_calls):
@@ -71,7 +71,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: list[Company]):
+    def print_companies(companies: List[Company]):
         return companies
 
     company_list = [{
@@ -94,7 +94,7 @@ def test_json_fix():
     original_user = UserDetail(name="John", age=21)
     json_data = json.dumps(original_user.model_dump())
     json_data = json_data[:-1] + ',}'
-    tool_call = mk_tool_call_json("UserDetail", json_data)
+    tool_call = mk_tool_call_jason("UserDetail", json_data)
     result = process_tool_call(tool_call, [UserDetail])
     assert result.output == original_user
     assert len(result.soft_errors) > 0
@@ -112,7 +112,7 @@ def test_json_fix():
 
 def test_list_in_string_fix():
     class User(BaseModel):
-        names: Optional[list[str]] = Field(default_factory=list)
+        names: Optional[List[str]]
 
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
@@ -143,7 +143,7 @@ def test_parallel_tools():
 
         def increment_counter(self):
             self.counter += 1
-            sleep(1)
+            sleep(0.5)
 
     counter = CounterClass()
     tool_call = mk_tool_call("increment_counter", {})
