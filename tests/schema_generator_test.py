@@ -2,7 +2,7 @@ import pytest
 from typing import List, Optional, Annotated, Union, Literal
 from pydantic import BaseModel, Field, field_validator
 from llm_easy_tools import get_function_schema, LLMFunction
-from llm_easy_tools.schema_generator import get_name, get_tool_defs
+from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
 from pprint import pprint
 
 def simple_function(
@@ -16,6 +16,7 @@ def simple_function_no_docstring(
     apple: Annotated[str, 'The apple'],
     banana: Annotated[str, 'The banana']
 ):
+    """Function with annotated parameters but no docstring"""
     pass
 
 def test_function_schema():
@@ -39,6 +40,7 @@ def test_noparams():
         pass
 
     def function_no_doc():
+        """Function with no docstring and no parameters"""
         pass
 
     result = get_function_schema(function_with_no_params)
@@ -48,7 +50,7 @@ def test_noparams():
 
     result = get_function_schema(function_no_doc)
     assert result['name'] == 'function_no_doc'
-    assert result['description'] == ''
+    assert result['description'] == 'Function with no docstring and no parameters'
     assert result['parameters']['properties'] == {}
 
 def test_nested():
@@ -70,7 +72,7 @@ def test_nested():
         bars: List[Bar]
     ):
         """spams everything"""
-        ...
+        pass
 
     function_schema = get_function_schema(nested_structure_function)
     assert function_schema['name'] == 'nested_structure_function'
@@ -89,7 +91,7 @@ def test_methods():
             size: Optional[float] = None
         ):
             """simple method does something"""
-            ...
+            pass
 
     example_object = ExampleClass()
     function_schema = get_function_schema(example_object.simple_method)
@@ -104,7 +106,7 @@ def test_LLMFunction():
         size: Optional[float] = None
     ):
         """simple function does something"""
-        ...
+        pass
 
     func = LLMFunction(new_simple_function, name='changed_name')
     function_schema = func.schema
