@@ -1,5 +1,5 @@
 import pytest
-from typing import List, Optional, Annotated
+from typing import list, Optional, Annotated
 from pydantic import BaseModel, Field
 from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
@@ -68,7 +68,7 @@ def test_nested():
         foo: Foo
         bar: Bar
 
-    def nested_structure_function(foo: Foo, bars: List[Bar]):
+    def nested_structure_function(foo: Foo, bars: list[Bar]):
         """Spams everything."""
         pass
 
@@ -231,9 +231,9 @@ def test_strict():
     class Company(BaseModel):
         name: str
         speciality: str
-        addresses: List[Address]
+        addresses: list[Address]
 
-    def print_companies(companies: List[Company]):
+    def print_companies(companies: list[Company]):
         ...
 
     schema = get_tool_defs([print_companies], strict=True)
