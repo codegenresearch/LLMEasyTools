@@ -1,7 +1,7 @@
 import json
 import pytest
 from time import sleep, time
-from typing import Any, Optional
+from typing import Any, Optional, list
 from pydantic import BaseModel, Field, ValidationError
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
@@ -9,14 +9,14 @@ from llm_easy_tools import LLMFunction
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock
 
-def mk_tool_call(name, args):
+def mk_tool_call(name: str, args: dict) -> SimpleToolCall:
     arguments = json.dumps(args)
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=arguments), type='function')
 
-def mk_tool_call_jason(name, args):
+def mk_tool_call_jason(name: str, args: str) -> SimpleToolCall:
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=args), type='function')
 
-def mk_chat_completion(tool_calls):
+def mk_chat_completion(tool_calls: list[SimpleToolCall]) -> SimpleCompletion:
     return SimpleCompletion(
         id='A',
         created=0,
@@ -71,7 +71,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: list[Company]):
+    def print_companies(companies: list[Company]) -> list[Company]:
         return companies
 
     company_list = [{
@@ -143,7 +143,7 @@ def test_parallel_tools():
 
         def increment_counter(self):
             self.counter += 1
-            sleep(0.5)
+            sleep(0.1)
 
     counter = CounterClass()
     tool_call = mk_tool_call("increment_counter", {})
@@ -158,7 +158,7 @@ def test_parallel_tools():
 
     time_taken = end_time - start_time
     assert counter.counter == 10
-    assert time_taken <= 3, f"Expected processing time to be less than or equal to 3 seconds, but was {time_taken}"
+    assert time_taken <= 1, f"Expected processing time to be less than or equal to 1 second, but was {time_taken}"
 
 def test_process_one_tool_call():
     class User(BaseModel):
