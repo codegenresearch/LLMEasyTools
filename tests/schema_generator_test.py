@@ -1,6 +1,6 @@
 import pytest
 from typing import List, Optional, Union, Annotated, Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from llm_easy_tools import get_function_schema, LLMFunction
 from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_name, get_tool_defs
 from pprint import pprint
@@ -229,9 +229,9 @@ def test_strict():
     class Company(BaseModel):
         name: str
         speciality: str
-        addresses: list[Address]
+        addresses: List[Address]
 
-    def print_companies(companies: list[Company]):
+    def print_companies(companies: List[Company]):
         ...
 
     schema = get_tool_defs([print_companies], strict=True)
