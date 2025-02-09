@@ -181,9 +181,9 @@ def test_strict():
     class Company(BaseModel):
         name: str
         speciality: str
-        addresses: list[Address]
+        addresses: List[Address]
 
-    def print_companies(companies: list[Company]):
+    def print_companies(companies: List[Company]):
         ...
 
     schema = get_tool_defs([print_companies], strict=True)
