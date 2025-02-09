@@ -70,7 +70,7 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies: List[Company]):
+    def print_companies(companies: list[Company]):
         return companies
 
     company_list = [{
@@ -92,9 +92,7 @@ def test_json_fix():
 
     original_user = UserDetail(name="John", age=21)
     json_data = json.dumps(original_user.model_dump())
-    json_data = json_data[:-1]
-    json_data = json_data + ',}'
-    tool_call = mk_tool_call("UserDetail", json_data)
+    tool_call = mk_tool_call_jason("UserDetail", json_data)
     result = process_tool_call(tool_call, [UserDetail])
     assert result.output == original_user
     assert len(result.soft_errors) > 0
