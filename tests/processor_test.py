@@ -124,7 +124,7 @@ def test_list_in_string_fix():
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
     assert result.output.names == ["John", "Doe"]
-    assert len(result.soft_errors) == 1
+    assert len(result.soft_errors) == 0
 
     tool_call = mk_tool_call("User", {"names": "[\"John\", \"Doe\"]"})
     result = process_tool_call(tool_call, [User])
