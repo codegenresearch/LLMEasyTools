@@ -13,7 +13,7 @@ def mk_tool_call(name, args):
     arguments = json.dumps(args)
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=arguments), type='function')
 
-def mk_tool_call_jason(name, args):
+def mk_tool_call_json(name, args):
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=args), type='function')
 
 def mk_chat_completion(tool_calls):
