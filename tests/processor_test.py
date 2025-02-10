@@ -4,16 +4,16 @@ from time import sleep, time
 
 from unittest.mock import Mock
 from pydantic import BaseModel, Field, ValidationError
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
 from llm_easy_tools.types import SimpleMessage, SimpleToolCall, SimpleFunction, SimpleChoice, SimpleCompletion
 from llm_easy_tools.processor import process_response, process_tool_call, ToolResult, process_one_tool_call
 from llm_easy_tools import LLMFunction
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
-def mk_tool_call(name, args):
+def mk_tool_call(name: str, args: Dict[str, Any]) -> SimpleToolCall:
     return SimpleToolCall(id='A', function=SimpleFunction(name=name, arguments=json.dumps(args)), type='function')
 
-def mk_chat_completion(tool_calls):
+def mk_chat_completion(tool_calls: List[SimpleToolCall]) -> SimpleCompletion:
     return SimpleCompletion(
         id='A',
         created=0,
@@ -29,13 +29,13 @@ def mk_chat_completion(tool_calls):
 
 def test_process_methods():
     class TestTool:
-        def tool_method(self, arg):
+        def tool_method(self, arg: int) -> str:
             return f'executed tool_method with param: {arg}'
 
-        def no_output(self, arg):
+        def no_output(self, arg: int) -> None:
             pass
 
-        def failing_method(self, arg):
+        def failing_method(self, arg: int) -> str:
             raise Exception('Some exception')
 
     tool = TestTool()
@@ -68,8 +68,8 @@ def test_process_complex():
         speciality: str
         address: Address
 
-    def print_companies(companies):
-        return companies
+    def print_companies(companies: List[Dict[str, Any]]) -> List[Company]:
+        return [Company(**company) for company in companies]
 
     company_list = [{
         'address': {'city': 'Metropolis', 'street': '150 Futura Plaza'},
@@ -109,7 +109,7 @@ def test_json_fix():
 
 def test_list_in_string_fix():
     class User(BaseModel):
-        names: Optional[list[str]]
+        names: Optional[List[str]]
 
     tool_call = mk_tool_call("User", {"names": "John, Doe"})
     result = process_tool_call(tool_call, [User])
@@ -138,7 +138,7 @@ def test_parallel_tools():
         def __init__(self):
             self.counter = 0
 
-        def increment_counter(self):
+        def increment_counter(self) -> None:
             self.counter += 1
             sleep(1)
 
@@ -155,7 +155,7 @@ def test_parallel_tools():
 
     time_taken = end_time - start_time
     assert counter.counter == 10
-    assert time_taken <= 3
+    assert time_taken <= 3, f"Expected processing time to be less than or equal to 3 seconds, but was {time_taken}"
 
 def test_process_one_tool_call():
     class User(BaseModel):
