@@ -137,14 +137,12 @@ def _recursive_purge_titles(d: Dict[str, Any]) -> None:
     """
     Recursively removes 'title' keys from a dictionary if they are associated with a 'type' key.
 
-    This function is used to clean up JSON schemas by removing unnecessary 'title' fields.
-
     Args:
         d (Dict[str, Any]): The dictionary to process.
     """
     if isinstance(d, dict):
         for key in list(d.keys()):
-            if key == 'title' and "type" in d.keys():
+            if key == 'title' and "type" in d:
                 del d[key]
             else:
                 _recursive_purge_titles(d[key])
@@ -183,7 +181,7 @@ def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive
     """
     if isinstance(function, LLMFunction):
         if case_insensitive:
-            raise ValueError("Cannot use case_insensitive with LLMFunction")
+            raise ValueError("Case insensitivity is not supported for LLMFunction")
         return function.schema
 
     description = ''
