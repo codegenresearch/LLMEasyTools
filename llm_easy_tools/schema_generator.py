@@ -1,14 +1,12 @@
 import inspect
-from typing import Annotated, Callable, Dict, Any, get_origin, Type, Union
+from typing import Callable, Dict, Any, Type, Union
 from typing_extensions import TypeGuard
 
-import copy
 import pydantic as pd
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 
 from pprint import pprint
-import sys
 
 class LLMFunction:
     def __init__(self, func, schema=None, name=None, description=None, strict=False):
@@ -33,8 +31,6 @@ class LLMFunction:
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
-
-
 def tool_def(function_schema: dict) -> dict:
     return {
         "type": "function",
@@ -58,13 +54,7 @@ def get_tool_defs(
 def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]:
     fields = {}
     parameters = inspect.signature(function).parameters
-    # Get the global namespace, handling both functions and methods
-    if inspect.ismethod(function):
-        # For methods, get the class's module globals
-        function_globals = sys.modules[function.__module__].__dict__
-    else:
-        # For regular functions, use __globals__ if available
-        function_globals = getattr(function, '__globals__', {})
+    function_globals = getattr(function, '__globals__', {})
 
     for name, parameter in parameters.items():
         description = None
@@ -76,16 +66,12 @@ def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]
                 description = type_.__metadata__[0]
             type_ = type_.__args__[0]
         if isinstance(type_, str):
-            # this happens in postponed annotation evaluation, we need to try to resolve the type
-            # if the type is not in the global namespace, we will get a NameError
             type_ = eval(type_, function_globals)
         default = PydanticUndefined if parameter.default is inspect.Parameter.empty else parameter.default
         fields[name] = (type_, pd.Field(default, description=description))
     return pd.create_model(f'{function.__name__}_ParameterModel', **fields)
 
-
 def _recursive_purge_titles(d: Dict[str, Any]) -> None:
-    """Remove a titles from a schema recursively"""
     if isinstance(d, dict):
         for key in list(d.keys()):
             if key == 'title' and "type" in d.keys():
@@ -132,8 +118,6 @@ def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive
 
     return function_schema
 
-# copied from openai implementation which also uses Apache 2.0 license
-
 def to_strict_json_schema(schema: dict) -> dict[str, Any]:
     return _ensure_strict_json_schema(schema, path=())
 
@@ -141,9 +125,6 @@ def _ensure_strict_json_schema(
     json_schema: object,
     path: tuple[str, ...],
 ) -> dict[str, Any]:
-    """Mutates the given JSON schema to ensure it conforms to the `strict` standard
-    that the API expects.
-    """
     if not is_dict(json_schema):
         raise TypeError(f"Expected {json_schema} to be a dictionary; path={path}")
 
@@ -151,8 +132,6 @@ def _ensure_strict_json_schema(
     if typ == "object" and "additionalProperties" not in json_schema:
         json_schema["additionalProperties"] = False
 
-    # object types
-    # { 'type': 'object', 'properties': { 'a':  {...} } }
     properties = json_schema.get("properties")
     if is_dict(properties):
         json_schema["required"] = [prop for prop in properties.keys()]
@@ -161,24 +140,20 @@ def _ensure_strict_json_schema(
             for key, prop_schema in properties.items()
         }
 
-    # arrays
-    # { 'type': 'array', 'items': {...} }
     items = json_schema.get("items")
     if is_dict(items):
         json_schema["items"] = _ensure_strict_json_schema(items, path=(*path, "items"))
 
-    # unions
     any_of = json_schema.get("anyOf")
     if isinstance(any_of, list):
         json_schema["anyOf"] = [
             _ensure_strict_json_schema(variant, path=(*path, "anyOf", str(i))) for i, variant in enumerate(any_of)
         ]
 
-    # intersections
     all_of = json_schema.get("allOf")
     if isinstance(all_of, list):
         json_schema["allOf"] = [
-            _ensure_strict_json_schema(entry, path=(*path, "anyOf", str(i))) for i, entry in enumerate(all_of)
+            _ensure_strict_json_schema(entry, path=(*path, "allOf", str(i))) for i, entry in enumerate(all_of)
         ]
 
     defs = json_schema.get("$defs")
@@ -188,22 +163,34 @@ def _ensure_strict_json_schema(
 
     return json_schema
 
-
 def is_dict(obj: object) -> TypeGuard[dict[str, object]]:
-    # just pretend that we know there are only `str` keys
-    # as that check is not worth the performance cost
     return isinstance(obj, dict)
 
+def insert_prefix(prefix_class, schema, prefix_schema_name=True, case_insensitive=False):
+    if not issubclass(prefix_class, BaseModel):
+        raise TypeError("The given class reference is not a subclass of pydantic BaseModel")
+    prefix_schema = prefix_class.model_json_schema()
+    _recursive_purge_titles(prefix_schema)
+    prefix_schema.pop('description', '')
 
-#######################################
-#
-# Examples
+    if 'parameters' in schema:
+        required = schema['parameters'].get('required', [])
+        prefix_schema['required'].extend(required)
+        for key, value in schema['parameters']['properties'].items():
+            prefix_schema['properties'][key] = value
+    new_schema = schema.copy()
+    new_schema['parameters'] = prefix_schema
+    if not new_schema['parameters']['properties']:
+        new_schema.pop('parameters')
+    if prefix_schema_name:
+        prefix_name = prefix_class.__name__.lower() if case_insensitive else prefix_class.__name__
+        new_schema['name'] = f"{prefix_name}_and_{schema['name']}"
+    return new_schema
 
 if __name__ == "__main__":
     def function_with_doc():
         """
-        This function has a docstring and no parameteres.
-        Expected Cost: high
+        This function has a docstring and no parameters.
         """
         pass
 
