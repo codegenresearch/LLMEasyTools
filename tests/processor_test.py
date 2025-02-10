@@ -185,7 +185,7 @@ def test_process_one_tool_call():
 
 
 ### Key Changes:
-1. **Removed Misplaced Text**: Ensured that there are no misplaced comments or text that could cause syntax errors.
+1. **Removed Misplaced Text**: Removed any extraneous comments or text that could cause syntax errors.
 2. **Function Signatures**: Added type hints for parameters and return types.
 3. **Consistent Naming**: Used more descriptive names for functions and variables.
 4. **JSON Data Handling**: Corrected the construction of `json_data` in `test_json_fix` to ensure it forms a valid JSON object.
