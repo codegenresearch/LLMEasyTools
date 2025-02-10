@@ -2,6 +2,7 @@ import inspect
 from typing import Annotated, Callable, Dict, Any, get_origin, Type, Union
 from typing_extensions import TypeGuard
 
+import copy
 import pydantic as pd
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
@@ -38,7 +39,13 @@ def tool_def(function_schema: dict) -> dict:
         "function": function_schema,
     }
 
-def get_tool_defs(functions: list[Union[Callable, LLMFunction]], case_insensitive: bool = False, prefix_class: Union[Type[BaseModel], None] = None, prefix_schema_name: bool = True, strict: bool = False) -> list[dict]:
+def get_tool_defs(
+    functions: list[Union[Callable, LLMFunction]],
+    case_insensitive: bool = False,
+    prefix_class: Union[Type[BaseModel], None] = None,
+    prefix_schema_name: bool = True,
+    strict: bool = False
+) -> list[dict]:
     result = []
     for function in functions:
         if isinstance(function, LLMFunction):
@@ -54,7 +61,11 @@ def get_tool_defs(functions: list[Union[Callable, LLMFunction]], case_insensitiv
 def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]:
     fields = {}
     parameters = inspect.signature(function).parameters
-    function_globals = sys.modules[function.__module__].__dict__ if inspect.ismethod(function) else getattr(function, '__globals__', {})
+    # Get the global namespace, handling both functions and methods
+    if inspect.ismethod(function):
+        function_globals = sys.modules[function.__module__].__dict__
+    else:
+        function_globals = getattr(function, '__globals__', {})
 
     for name, parameter in parameters.items():
         description = None
@@ -62,7 +73,8 @@ def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]
         if type_ is inspect._empty:
             raise ValueError(f"Parameter '{name}' has no type annotation")
         if get_origin(type_) is Annotated:
-            description = type_.__metadata__[0] if type_.__metadata__ else None
+            if type_.__metadata__:
+                description = type_.__metadata__[0]
             type_ = type_.__args__[0]
         if isinstance(type_, str):
             type_ = eval(type_, function_globals)
@@ -71,6 +83,7 @@ def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]
     return pd.create_model(f'{function.__name__}_ParameterModel', **fields)
 
 def _recursive_purge_titles(d: Dict[str, Any]) -> None:
+    """Recursively remove titles from a schema."""
     if isinstance(d, dict):
         for key in list(d.keys()):
             if key == 'title' and "type" in d.keys():
@@ -82,7 +95,7 @@ def get_name(func: Union[Callable, LLMFunction], case_insensitive: bool = False)
     schema_name = func.schema['name'] if isinstance(func, LLMFunction) else func.__name__
     return schema_name.lower() if case_insensitive else schema_name
 
-def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive: bool=False, strict: bool=False) -> dict:
+def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive: bool = False, strict: bool = False) -> dict[str, Any]:
     if isinstance(function, LLMFunction):
         if case_insensitive:
             raise ValueError("Cannot case insensitive for LLMFunction")
@@ -91,7 +104,7 @@ def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive
     description = function.__doc__.strip() if function.__doc__ else ''
     schema_name = get_name(function, case_insensitive)
 
-    function_schema = {
+    function_schema: dict[str, Any] = {
         'name': schema_name,
         'description': description,
     }
@@ -109,6 +122,7 @@ def to_strict_json_schema(schema: dict) -> dict[str, Any]:
     return _ensure_strict_json_schema(schema, ())
 
 def _ensure_strict_json_schema(json_schema: object, path: tuple[str, ...]) -> dict[str, Any]:
+    """Mutates the given JSON schema to ensure it conforms to the `strict` standard that the API expects."""
     if not is_dict(json_schema):
         raise TypeError(f"Expected {json_schema} to be a dictionary; path={path}")
 
