@@ -164,11 +164,11 @@ def process_message(message: ChatCompletionMessage, functions: list[Union[Callab
     if not tool_calls:
         return []
 
-    args_list = [(tool_call, functions, kwargs) for tool_call in tool_calls]
-    executor = kwargs.get('executor')
-    if executor:
-        return list(executor.map(lambda args: process_tool_call(*args), args_list))
-    return list(map(lambda args: process_tool_call(*args), args_list))
+    results = []
+    for tool_call in tool_calls:
+        result = process_tool_call(tool_call, functions, **kwargs)
+        results.append(result)
+    return results
 
 def process_one_tool_call(response: ChatCompletion, functions: list[Union[Callable, LLMFunction]], index=0, **kwargs) -> Optional[ToolResult]:
     """
