@@ -220,11 +220,11 @@ if __name__ == "__main__":
 2. **Error Handling**: Ensured consistent error handling and capturing of stack traces.
 3. **Type Annotations**: Reviewed and adjusted type annotations to match the gold code's specifications.
 4. **Output Handling**: Refined the `to_message` method to handle outputs and errors consistently.
-5. **Function Naming and Structure**: Ensured function names and structures are consistent with the gold code.
+5. **Function Naming and Parameters**: Ensured function names and parameters are consistent with the gold code.
 6. **List Comprehensions and Loops**: Reviewed and adjusted the use of list comprehensions and loops for consistency and readability.
 7. **Docstrings and Comments**: Ensured comprehensive and clear docstrings and comments.
 8. **Redundant Code**: Removed redundant code and logic to make the implementation more concise.
-9. **Use of Optional Parameters**: Ensured optional parameters are handled consistently and appropriately.
-10. **Consistency in Imports**: Ensured import statements are consistent with the gold code.
+9. **Consistency in Imports**: Ensured import statements are consistent with the gold code.
+10. **Use of Helper Functions**: Ensured helper functions are used effectively to improve readability and maintainability.
 
 These changes should address the feedback and bring the code closer to the gold standard.
