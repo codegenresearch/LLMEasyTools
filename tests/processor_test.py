@@ -194,3 +194,5 @@ def test_process_one_tool_call():
 7. **Assertions**: Ensured that assertions are specific and informative.
 8. **Data Structures**: Used consistent data structures like `List` and `Dict` from `typing`.
 9. **Formatting**: Maintained consistent formatting for readability and maintainability.
+
+This should address the syntax error and align the code more closely with the expected standards.
