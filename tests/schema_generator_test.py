@@ -26,7 +26,7 @@ def test_function_schema():
 
 def test_noparams():
     def function_with_no_params():
-        """this function has a docstring and takes no parameters"""
+        """This function has a docstring and takes no parameters"""
         pass
 
     def function_no_doc():
@@ -34,7 +34,7 @@ def test_noparams():
 
     result = get_function_schema(function_with_no_params)
     assert result['name'] == 'function_with_no_params'
-    assert result['description'] == "this function has a docstring and takes no parameters"
+    assert result['description'] == "This function has a docstring and takes no parameters"
     assert result['parameters']['properties'] == {}
 
     result = get_function_schema(function_no_doc)
@@ -48,9 +48,9 @@ def test_nested():
         size: Optional[float] = None
 
     class Bar(BaseModel):
-        """some bar"""
-        apple: str = Field(description="the apple")
-        banana: str = Field(description="the banana")
+        """Some Bar"""
+        apple: str = Field(description="The apple")
+        banana: str = Field(description="The banana")
 
     class FooAndBar(BaseModel):
         foo: Foo
@@ -98,8 +98,8 @@ def test_LLMFunction():
 
 def test_merge_schemas():
     class Reflection(BaseModel):
-        relevancy: str = Field(..., description="was the last retrieved information relevant and why")
-        next_actions_plan: str = Field(..., description="what you plan to do next and why")
+        relevancy: str = Field(..., description="Was the last retrieved information relevant and why")
+        next_actions_plan: str = Field(..., description="What you plan to do next and why")
 
     function_schema = get_function_schema(simple_function)
     new_schema = insert_prefix(Reflection, function_schema)
@@ -120,8 +120,8 @@ def test_noparams_function_merge():
         pass
 
     class Reflection(BaseModel):
-        relevancy: str = Field(..., description="was the last retrieved information relevant and why")
-        next_actions_plan: str = Field(..., description="what you plan to do next and why")
+        relevancy: str = Field(..., description="Was the last retrieved information relevant and why")
+        next_actions_plan: str = Field(..., description="What you plan to do next and why")
 
     function_schema = get_function_schema(function_no_params)
     assert function_schema['name'] == 'function_no_params'
@@ -133,25 +133,25 @@ def test_noparams_function_merge():
 
 def test_model_init_function():
     class User(BaseModel):
-        """a user object"""
+        """A user object"""
         name: str
         city: str
 
     function_schema = get_function_schema(User)
     assert function_schema['name'] == 'User'
-    assert function_schema['description'] == 'a user object'
+    assert function_schema['description'] == 'A user object'
     assert len(function_schema['parameters']['properties']) == 2
     assert len(function_schema['parameters']['required']) == 2
 
     new_function = LLMFunction(User, name="extract_user_details")
     assert new_function.schema['name'] == 'extract_user_details'
-    assert new_function.schema['description'] == 'a user object'
+    assert new_function.schema['description'] == 'A user object'
     assert len(new_function.schema['parameters']['properties']) == 2
     assert len(new_function.schema['parameters']['required']) == 2
 
 def test_case_insensitivity():
     class User(BaseModel):
-        """a user object"""
+        """A user object"""
         name: str
         city: str
 
@@ -206,7 +206,7 @@ def test_strict():
 
 
 ### Key Changes:
-1. **Docstring Formatting**: Ensured that docstrings are consistently formatted without extra periods at the end.
+1. **Docstring Consistency**: Ensured that docstrings are consistently formatted with proper capitalization and punctuation.
 2. **Parameter Formatting**: Parameters are listed on separate lines for better readability.
 3. **Assertion Messages**: Reviewed and ensured assertions match the expected values and structure.
 4. **Class and Function Descriptions**: Ensured descriptions are consistent in capitalization and phrasing.
