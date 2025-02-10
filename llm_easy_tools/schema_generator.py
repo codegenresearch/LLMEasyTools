@@ -1,12 +1,14 @@
 import inspect
-from typing import Callable, Dict, Any, Type, Union
+from typing import Annotated, Callable, Dict, Any, get_origin, Type, Union
 from typing_extensions import TypeGuard
 
+import copy
 import pydantic as pd
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 
 from pprint import pprint
+import sys
 
 class LLMFunction:
     def __init__(self, func, schema=None, name=None, description=None, strict=False):
@@ -54,7 +56,13 @@ def get_tool_defs(
 def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]:
     fields = {}
     parameters = inspect.signature(function).parameters
-    function_globals = getattr(function, '__globals__', {})
+    # Get the global namespace, handling both functions and methods
+    if inspect.ismethod(function):
+        # For methods, get the class's module globals
+        function_globals = sys.modules[function.__module__].__dict__
+    else:
+        # For regular functions, use __globals__ if available
+        function_globals = getattr(function, '__globals__', {})
 
     for name, parameter in parameters.items():
         description = None
@@ -66,12 +74,18 @@ def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]
                 description = type_.__metadata__[0]
             type_ = type_.__args__[0]
         if isinstance(type_, str):
-            type_ = eval(type_, function_globals)
+            # this happens in postponed annotation evaluation, we need to try to resolve the type
+            # if the type is not in the global namespace, we will get a NameError
+            try:
+                type_ = eval(type_, function_globals)
+            except NameError:
+                raise ValueError(f"Type '{type_}' for parameter '{name}' could not be resolved in the global namespace")
         default = PydanticUndefined if parameter.default is inspect.Parameter.empty else parameter.default
         fields[name] = (type_, pd.Field(default, description=description))
     return pd.create_model(f'{function.__name__}_ParameterModel', **fields)
 
 def _recursive_purge_titles(d: Dict[str, Any]) -> None:
+    """Remove titles from a schema recursively."""
     if isinstance(d, dict):
         for key in list(d.keys()):
             if key == 'title' and "type" in d.keys():
@@ -125,6 +139,9 @@ def _ensure_strict_json_schema(
     json_schema: object,
     path: tuple[str, ...],
 ) -> dict[str, Any]:
+    """Mutates the given JSON schema to ensure it conforms to the `strict` standard
+    that the API expects.
+    """
     if not is_dict(json_schema):
         raise TypeError(f"Expected {json_schema} to be a dictionary; path={path}")
 
