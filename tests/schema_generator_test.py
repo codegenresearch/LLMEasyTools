@@ -2,7 +2,7 @@ import pytest
 from typing import List, Optional, Union, Annotated, Literal
 from pydantic import BaseModel, Field, field_validator
 from llm_easy_tools import get_function_schema, LLMFunction
-from llm_easy_tools.schema_generator import parameters_basemodel_from_function, get_name, get_tool_defs
+from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
 from pprint import pprint
 
 
@@ -40,6 +40,7 @@ def test_noparams():
         pass
 
     def function_no_doc():
+        """Function without a docstring"""
         pass
 
     result = get_function_schema(function_with_no_params)
@@ -254,5 +255,5 @@ This code addresses the feedback by:
 3. Reviewing and aligning assertions with the gold code.
 4. Ensuring consistent handling of optional parameters.
 5. Maintaining consistent naming conventions and structure.
-6. Including the `Literal` import.
+6. Including the `_recursive_purge_titles` import.
 7. Aligning schema merging logic with the gold code.
