@@ -34,6 +34,15 @@ class LLMFunction:
         return self.func(*args, **kwargs)
 
 def tool_def(function_schema: dict) -> dict:
+    """
+    Creates a tool definition dictionary from a function schema.
+
+    Args:
+        function_schema (dict): The schema of the function.
+
+    Returns:
+        dict: A dictionary representing the tool definition.
+    """
     return {
         "type": "function",
         "function": function_schema,
@@ -44,6 +53,17 @@ def get_tool_defs(
         case_insensitive: bool = False,
         strict: bool = False
         ) -> list[dict]:
+    """
+    Generates tool definitions for a list of functions or LLMFunctions.
+
+    Args:
+        functions (list[Union[Callable, LLMFunction]]): A list of functions or LLMFunction instances.
+        case_insensitive (bool, optional): Whether to treat function names case-insensitively. Defaults to False.
+        strict (bool, optional): Whether to enforce strict JSON schema validation. Defaults to False.
+
+    Returns:
+        list[dict]: A list of tool definitions.
+    """
     result = []
     for function in functions:
         if isinstance(function, LLMFunction):
@@ -54,6 +74,15 @@ def get_tool_defs(
     return result
 
 def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]:
+    """
+    Creates a Pydantic BaseModel from the parameters of a function.
+
+    Args:
+        function (Callable): The function to create a model from.
+
+    Returns:
+        Type[pd.BaseModel]: A Pydantic BaseModel representing the function parameters.
+    """
     fields = {}
     parameters = inspect.signature(function).parameters
     # Get the global namespace, handling both functions and methods
@@ -85,7 +114,12 @@ def parameters_basemodel_from_function(function: Callable) -> Type[pd.BaseModel]
     return pd.create_model(f'{function.__name__}_ParameterModel', **fields)
 
 def _recursive_purge_titles(d: Dict[str, Any]) -> None:
-    """Remove titles from a schema recursively."""
+    """
+    Recursively removes 'title' keys from a dictionary if they are associated with a 'type' key.
+
+    Args:
+        d (Dict[str, Any]): The dictionary to process.
+    """
     if isinstance(d, dict):
         for key in list(d.keys()):
             if key == 'title' and "type" in d.keys():
@@ -94,6 +128,16 @@ def _recursive_purge_titles(d: Dict[str, Any]) -> None:
                 _recursive_purge_titles(d[key])
 
 def get_name(func: Union[Callable, LLMFunction], case_insensitive: bool = False) -> str:
+    """
+    Retrieves the name of a function or LLMFunction, optionally converting it to lowercase.
+
+    Args:
+        func (Union[Callable, LLMFunction]): The function or LLMFunction instance.
+        case_insensitive (bool, optional): Whether to return the name in lowercase. Defaults to False.
+
+    Returns:
+        str: The name of the function or LLMFunction.
+    """
     if isinstance(func, LLMFunction):
         schema_name = func.schema['name']
     else:
@@ -104,6 +148,17 @@ def get_name(func: Union[Callable, LLMFunction], case_insensitive: bool = False)
     return schema_name
 
 def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive: bool=False, strict: bool=False) -> dict:
+    """
+    Generates a JSON schema for a function or LLMFunction.
+
+    Args:
+        function (Union[Callable, LLMFunction]): The function or LLMFunction instance.
+        case_insensitive (bool, optional): Whether to treat function names case-insensitively. Defaults to False.
+        strict (bool, optional): Whether to enforce strict JSON schema validation. Defaults to False.
+
+    Returns:
+        dict: A dictionary representing the JSON schema of the function.
+    """
     if isinstance(function, LLMFunction):
         if case_insensitive:
             raise ValueError("Cannot case insensitive for LLMFunction")
@@ -133,14 +188,30 @@ def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive
     return function_schema
 
 def to_strict_json_schema(schema: dict) -> dict[str, Any]:
+    """
+    Converts a JSON schema to a strict JSON schema.
+
+    Args:
+        schema (dict): The JSON schema to convert.
+
+    Returns:
+        dict[str, Any]: The strict JSON schema.
+    """
     return _ensure_strict_json_schema(schema, path=())
 
 def _ensure_strict_json_schema(
     json_schema: object,
     path: tuple[str, ...],
 ) -> dict[str, Any]:
-    """Mutates the given JSON schema to ensure it conforms to the `strict` standard
-    that the API expects.
+    """
+    Mutates the given JSON schema to ensure it conforms to the `strict` standard that the API expects.
+
+    Args:
+        json_schema (object): The JSON schema to process.
+        path (tuple[str, ...]): The path to the current location in the schema.
+
+    Returns:
+        dict[str, Any]: The processed JSON schema.
     """
     if not is_dict(json_schema):
         raise TypeError(f"Expected {json_schema} to be a dictionary; path={path}")
@@ -181,9 +252,30 @@ def _ensure_strict_json_schema(
     return json_schema
 
 def is_dict(obj: object) -> TypeGuard[dict[str, object]]:
+    """
+    Checks if the given object is a dictionary.
+
+    Args:
+        obj (object): The object to check.
+
+    Returns:
+        TypeGuard[dict[str, object]]: True if the object is a dictionary, False otherwise.
+    """
     return isinstance(obj, dict)
 
 def insert_prefix(prefix_class, schema, prefix_schema_name=True, case_insensitive=False):
+    """
+    Inserts a prefix class schema into the given schema.
+
+    Args:
+        prefix_class (Type[BaseModel]): The prefix class to insert.
+        schema (dict): The schema to insert into.
+        prefix_schema_name (bool, optional): Whether to include the prefix class name in the schema name. Defaults to True.
+        case_insensitive (bool, optional): Whether to treat names case-insensitively. Defaults to False.
+
+    Returns:
+        dict: The updated schema.
+    """
     if not issubclass(prefix_class, BaseModel):
         raise TypeError("The given class reference is not a subclass of pydantic BaseModel")
     prefix_schema = prefix_class.model_json_schema()
