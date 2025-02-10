@@ -12,6 +12,16 @@ import sys
 
 class LLMFunction:
     def __init__(self, func, schema=None, name=None, description=None, strict=False):
+        """
+        Initializes an LLMFunction instance.
+
+        Args:
+            func (Callable): The function to wrap.
+            schema (dict, optional): The schema for the function. Defaults to None.
+            name (str, optional): The name of the function. Defaults to None.
+            description (str, optional): The description of the function. Defaults to None.
+            strict (bool, optional): Whether to enforce strict JSON schema validation. Defaults to False.
+        """
         self.func = func
         self.__name__ = func.__name__
         self.__doc__ = func.__doc__
@@ -31,6 +41,16 @@ class LLMFunction:
                 self.schema['description'] = description
 
     def __call__(self, *args, **kwargs):
+        """
+        Calls the wrapped function with the provided arguments.
+
+        Args:
+            *args: Positional arguments to pass to the function.
+            **kwargs: Keyword arguments to pass to the function.
+
+        Returns:
+            The result of the function call.
+        """
         return self.func(*args, **kwargs)
 
 def tool_def(function_schema: dict) -> dict:
@@ -117,6 +137,8 @@ def _recursive_purge_titles(d: Dict[str, Any]) -> None:
     """
     Recursively removes 'title' keys from a dictionary if they are associated with a 'type' key.
 
+    This function is used to clean up JSON schemas by removing unnecessary 'title' fields.
+
     Args:
         d (Dict[str, Any]): The dictionary to process.
     """
@@ -161,7 +183,7 @@ def get_function_schema(function: Union[Callable, LLMFunction], case_insensitive
     """
     if isinstance(function, LLMFunction):
         if case_insensitive:
-            raise ValueError("Cannot case insensitive for LLMFunction")
+            raise ValueError("Cannot use case_insensitive with LLMFunction")
         return function.schema
 
     description = ''
@@ -205,6 +227,9 @@ def _ensure_strict_json_schema(
 ) -> dict[str, Any]:
     """
     Mutates the given JSON schema to ensure it conforms to the `strict` standard that the API expects.
+
+    This function processes the JSON schema to enforce strict validation rules, such as setting
+    `additionalProperties` to False for objects and ensuring all properties are required.
 
     Args:
         json_schema (object): The JSON schema to process.
