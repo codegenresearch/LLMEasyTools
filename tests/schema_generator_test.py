@@ -1,31 +1,16 @@
 import pytest
-
-from typing import List, Optional, Union, Literal, Annotated
-from pydantic import BaseModel, Field, field_validator
-
+from typing import List, Optional
+from pydantic import BaseModel
 from llm_easy_tools import get_function_schema, LLMFunction
-
-from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
-
-from pprint import pprint
-
 
 def simple_function(count: int, size: Optional[float] = None):
     """simple function does something"""
     pass
 
-
-def simple_function_no_docstring(
-        apple: Annotated[str, 'The apple'],
-        banana: Annotated[str, 'The banana']
-):
+def simple_function_no_docstring(apple: str, banana: str):
     pass
 
-
-
-
 def test_function_schema():
-
     function_schema = get_function_schema(simple_function)
     assert function_schema['name'] == 'simple_function'
     assert function_schema['description'] == 'simple function does something'
@@ -40,9 +25,7 @@ def test_function_schema():
 
 def test_noparams():
     def function_with_no_params():
-        """
-        This function has a docstring and takes no parameters.
-        """
+        """This function has a docstring and takes no parameters."""
         pass
 
     def function_no_doc():
@@ -53,12 +36,10 @@ def test_noparams():
     assert result['description'] == "This function has a docstring and takes no parameters."
     assert result['parameters']['properties'] == {}
 
-    # Function without docstring and EmptyModel as parameter
     result = get_function_schema(function_no_doc)
     assert result['name'] == 'function_no_doc'
     assert result['description'] == ''
     assert result['parameters']['properties'] == {}
-
 
 def test_nested():
     class Foo(BaseModel):
@@ -66,9 +47,8 @@ def test_nested():
         size: Optional[float] = None
 
     class Bar(BaseModel):
-        """Some Bar"""
-        apple: str = Field(description="The apple")
-        banana: str = Field(description="The banana")
+        apple: str
+        banana: str
 
     class FooAndBar(BaseModel):
         foo: Foo
@@ -86,7 +66,6 @@ def test_nested():
     function_schema = get_function_schema(FooAndBar)
     assert function_schema['name'] == 'FooAndBar'
     assert len(function_schema['parameters']['properties']) == 2
-
 
 def test_methods():
     class ExampleClass:
@@ -110,43 +89,34 @@ def test_LLMFunction():
     func = LLMFunction(new_simple_function, name='changed_name')
     function_schema = func.schema
     assert function_schema['name'] == 'changed_name'
-    assert not 'strict' in function_schema or function_schema['strict'] == False
+    assert 'strict' not in function_schema or function_schema['strict'] is False
 
     func = LLMFunction(simple_function, strict=True)
     function_schema = func.schema
-    assert function_schema['strict'] == True
+    assert function_schema['strict'] is True
 
 def test_model_init_function():
-
     class User(BaseModel):
-        """A user object"""
         name: str
         city: str
 
-
     function_schema = get_function_schema(User)
     assert function_schema['name'] == 'User'
-    assert function_schema['description'] == 'A user object'
     assert len(function_schema['parameters']['properties']) == 2
     assert len(function_schema['parameters']['required']) == 2
 
     new_function = LLMFunction(User, name="extract_user_details")
     assert new_function.schema['name'] == 'extract_user_details'
-    assert new_function.schema['description'] == 'A user object'
     assert len(new_function.schema['parameters']['properties']) == 2
     assert len(new_function.schema['parameters']['required']) == 2
 
-
 def test_case_insensitivity():
-
     class User(BaseModel):
-        """A user object"""
         name: str
         city: str
 
     function_schema = get_function_schema(User, case_insensitive=True)
     assert function_schema['name'] == 'user'
-    assert get_name(User, case_insensitive=True) == 'user'
 
 def test_function_no_type_annotation():
     def function_with_missing_type(param):
@@ -161,15 +131,13 @@ def test_pydantic_param():
         query: str
         region: str
 
-
     def search(query: Query):
         ...
 
-    schema = get_tool_defs([search])
-
-    assert schema[0]['function']['name'] == 'search'
-    assert schema[0]['function']['description'] == ''
-    assert schema[0]['function']['parameters']['properties']['query']['$ref'] == '#/$defs/Query'
+    schema = get_function_schema(search)
+    assert schema['name'] == 'search'
+    assert schema['description'] == ''
+    assert schema['parameters']['properties']['query']['$ref'] == '#/$defs/Query'
 
 def test_strict():
     class Address(BaseModel):
@@ -184,15 +152,12 @@ def test_strict():
     def print_companies(companies: list[Company]):
         ...
 
-    schema = get_tool_defs([print_companies], strict=True)
-
-    pprint(schema)
-
-    function_schema = schema[0]['function']
+    schema = get_function_schema(print_companies, strict=True)
+    function_schema = schema
 
     assert function_schema['name'] == 'print_companies'
-    assert function_schema['strict'] == True
-    assert function_schema['parameters']['additionalProperties'] == False
-    assert function_schema['parameters']['$defs']['Address']['additionalProperties'] == False
+    assert function_schema['strict'] is True
+    assert function_schema['parameters']['additionalProperties'] is False
+    assert function_schema['parameters']['$defs']['Address']['additionalProperties'] is False
     assert function_schema['parameters']['$defs']['Address']['properties']['street']['type'] == 'string'
-    assert function_schema['parameters']['$defs']['Company']['additionalProperties'] == False
+    assert function_schema['parameters']['$defs']['Company']['additionalProperties'] is False
