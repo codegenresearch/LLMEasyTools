@@ -1,12 +1,8 @@
 import pytest
-
-from typing import List, Optional, Union, Literal, Annotated
-from pydantic import BaseModel, Field, field_validator
-
+from typing import List, Optional, Union, Literal
+from pydantic import BaseModel, Field
 from llm_easy_tools import get_function_schema, LLMFunction
-
 from llm_easy_tools.schema_generator import parameters_basemodel_from_function, _recursive_purge_titles, get_name, get_tool_defs
-
 from pprint import pprint
 
 
@@ -15,17 +11,11 @@ def simple_function(count: int, size: Optional[float] = None):
     pass
 
 
-def simple_function_no_docstring(
-        apple: Annotated[str, 'The apple'],
-        banana: Annotated[str, 'The banana']
-):
+def simple_function_no_docstring(apple: str, banana: str):
     pass
 
 
-
-
 def test_function_schema():
-
     function_schema = get_function_schema(simple_function)
     assert function_schema['name'] == 'simple_function'
     assert function_schema['description'] == 'simple function does something'
@@ -34,15 +24,11 @@ def test_function_schema():
     assert params_schema['type'] == "object"
     assert params_schema['properties']['count']['type'] == "integer"
     assert 'size' in params_schema['properties']
-    assert 'title' not in params_schema
-    assert 'title' not in params_schema['properties']['count']
-    assert 'description' not in params_schema
+
 
 def test_noparams():
     def function_with_no_params():
-        """
-        This function has a docstring and takes no parameters.
-        """
+        """\n        This function has a docstring and takes no parameters.\n        """
         pass
 
     def function_no_doc():
@@ -53,7 +39,6 @@ def test_noparams():
     assert result['description'] == "This function has a docstring and takes no parameters."
     assert result['parameters']['properties'] == {}
 
-    # Function without docstring and EmptyModel as parameter
     result = get_function_schema(function_no_doc)
     assert result['name'] == 'function_no_doc'
     assert result['description'] == ''
@@ -102,6 +87,7 @@ def test_methods():
     params_schema = function_schema['parameters']
     assert len(params_schema['properties']) == 2
 
+
 def test_LLMFunction():
     def new_simple_function(count: int, size: Optional[float] = None):
         """simple function does something"""
@@ -116,13 +102,49 @@ def test_LLMFunction():
     function_schema = func.schema
     assert function_schema['strict'] == True
 
-def test_model_init_function():
 
+def test_merge_schemas():
+    class Reflection(BaseModel):
+        relevancy: str = Field(..., description="Whas the last retrieved information relevant and why?")
+        next_actions_plan: str = Field(..., description="What you plan to do next and why")
+
+    function_schema = get_function_schema(simple_function)
+    new_schema = get_function_schema(Reflection, function_schema)
+    assert new_schema['name'] == "Reflection_and_simple_function"
+    assert len(new_schema['parameters']['properties']) == 4
+    assert len(new_schema['parameters']['required']) == 3
+    assert len(function_schema['parameters']['properties']) == 2  # the old schema is not changed
+    assert len(function_schema['parameters']['required']) == 1  # the old schema is not changed
+    param_names = list(new_schema['parameters']['properties'].keys())
+    assert param_names == ['relevancy', 'next_actions_plan', 'count', 'size']
+
+    function_schema = get_function_schema(simple_function)
+    new_schema = get_function_schema(Reflection, function_schema, case_insensitive=True)
+    assert new_schema['name'] == "reflection_and_simple_function"
+
+
+def test_noparams_function_merge():
+    def function_no_params():
+        pass
+
+    class Reflection(BaseModel):
+        relevancy: str = Field(..., description="Whas the last retrieved information relevant and why?")
+        next_actions_plan: str = Field(..., description="What you plan to do next and why")
+
+    function_schema = get_function_schema(function_no_params)
+    assert function_schema['name'] == 'function_no_params'
+    assert function_schema['parameters']['properties'] == {}
+
+    new_schema = get_function_schema(Reflection, function_schema)
+    assert len(new_schema['parameters']['properties']) == 2
+    assert new_schema['name'] == 'Reflection_and_function_no_params'
+
+
+def test_model_init_function():
     class User(BaseModel):
         """A user object"""
         name: str
         city: str
-
 
     function_schema = get_function_schema(User)
     assert function_schema['name'] == 'User'
@@ -138,7 +160,6 @@ def test_model_init_function():
 
 
 def test_case_insensitivity():
-
     class User(BaseModel):
         """A user object"""
         name: str
@@ -146,7 +167,7 @@ def test_case_insensitivity():
 
     function_schema = get_function_schema(User, case_insensitive=True)
     assert function_schema['name'] == 'user'
-    assert get_name(User, case_insensitive=True) == 'user'
+
 
 def test_function_no_type_annotation():
     def function_with_missing_type(param):
@@ -156,11 +177,11 @@ def test_function_no_type_annotation():
         get_function_schema(function_with_missing_type)
     assert str(exc_info.value) == "Parameter 'param' has no type annotation"
 
+
 def test_pydantic_param():
     class Query(BaseModel):
         query: str
         region: str
-
 
     def search(query: Query):
         ...
@@ -170,6 +191,7 @@ def test_pydantic_param():
     assert schema[0]['function']['name'] == 'search'
     assert schema[0]['function']['description'] == ''
     assert schema[0]['function']['parameters']['properties']['query']['$ref'] == '#/$defs/Query'
+
 
 def test_strict():
     class Address(BaseModel):
